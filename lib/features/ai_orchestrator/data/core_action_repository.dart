@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:latentspace/core/database/database_service.dart';
 import 'package:latentspace/core/database/base_repository.dart';
-import 'package:latentspace/features/models/core_ai_action.dart';
+import 'package:latentspace/features/ai_orchestrator/models/core_ai_action.dart';
 
 class CoreActionRepository implements BaseRepository<CoreAiAction> {
   final DatabaseService _dbService = DatabaseService();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latentspace/core/database/database_service.dart';
-import 'core/providers/database_providers.dart';
 
 void main() async {
   //Required because we are executing asynchronous code before runApp()
