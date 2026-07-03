@@ -45,7 +45,7 @@ class DatabaseService {
         json_payload TEXT NOT NULL,
         status TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
-      ) STRICT;
+      )
       ''',
     );
 
@@ -62,7 +62,7 @@ class DatabaseService {
           sub_category TEXT NOT NULL,
           transaction_date TEXT NOT NULL,
           FOREIGN KEY (action_id) REFERENCES core_ai_actions(action_id) ON DELETE CASCADE
-      ) STRICT;
+      )
       ''',
     );
 

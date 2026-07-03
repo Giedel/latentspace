@@ -46,8 +46,9 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
     }
   }
 
-  // The provider that the UI will listen to for changes in the list of actions
-  final coreActionNotifierProvider = StateNotifierProvider<CoreActionNotifier, AsyncValue<List<CoreAiAction>>>((ref) {
-    return CoreActionNotifier(ref);
-  });
 }
+
+  // The provider that the UI will listen to for changes in the list of actions
+final coreActionNotifierProvider = StateNotifierProvider<CoreActionNotifier, AsyncValue<List<CoreAiAction>>>((ref) {
+  return CoreActionNotifier(ref);
+});

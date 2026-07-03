@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latentspace/core/database/database_service.dart';
+import 'package:latentspace/pages/dashboard_page.dart';
 
 void main() async {
   //Required because we are executing asynchronous code before runApp()
@@ -33,11 +34,7 @@ class LatentSpaceApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('LatentSpace Database Initialized Successfully!'),
-        ),
-      ),
+      home:const DashboardPage()
     );
   }
 }
