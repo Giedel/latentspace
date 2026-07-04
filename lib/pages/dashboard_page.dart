@@ -48,16 +48,6 @@ class DashboardPage extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Open multimodal input sheet (Text, Voice, Image)
-        },
-        backgroundColor: const Color(0xFF6B4FA0),
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -295,41 +285,6 @@ class DashboardPage extends ConsumerWidget {
           Text(date, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      color: Colors.white,
-      elevation: 10,
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home, 'Home', true),
-            _buildNavItem(Icons.note_alt_outlined, 'Notes', false),
-            const SizedBox(width: 40), // Space for FAB
-            _buildNavItem(Icons.check_box_outlined, 'Tasks', false),
-            _buildNavItem(Icons.person_outline, 'Profile', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    final color = isActive ? const Color(0xFF6B4FA0) : Colors.grey;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-      ],
     );
   }
 }

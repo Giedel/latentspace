@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latentspace/core/database/database_service.dart';
 import 'package:latentspace/pages/dashboard_page.dart';
+import 'package:latentspace/pages/main_layout.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   //Required because we are executing asynchronous code before runApp()
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Boot up the database and enforce PRAGMA foreign_keys = ON immidiately
+  // Boot SQLite
   await DatabaseService().database;
 
   runApp(
@@ -27,14 +29,8 @@ class LatentSpaceApp extends StatelessWidget {
     return MaterialApp(
       title: 'LatentSpace',
       debugShowCheckedModeBanner: false, // hides the debug banner in the top right corner
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      home:const DashboardPage()
+      theme: AppTheme.lightTheme,
+      home:const MainLayout(),
     );
   }
 }
