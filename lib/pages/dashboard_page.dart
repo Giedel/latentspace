@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latentspace/core/providers/database_providers.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 
@@ -107,7 +106,7 @@ class DashboardPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -185,7 +184,7 @@ class DashboardPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -235,7 +234,7 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildDivider() {
-    return Divider(height: 1, color: Colors.grey.withOpacity(0.1), indent: 64, endIndent: 16);
+    return Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1), indent: 64, endIndent: 16);
   }
 
   Widget _buildRecentNotes() {

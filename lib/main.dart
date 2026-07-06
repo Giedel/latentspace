@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latentspace/core/database/database_service.dart';
-import 'package:latentspace/pages/dashboard_page.dart';
 import 'package:latentspace/pages/main_layout.dart';
 import 'core/theme/app_theme.dart';
 

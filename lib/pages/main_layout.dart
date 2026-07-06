@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'dashboard_page.dart';
 import 'todos_page.dart';
 import 'money_page.dart';
-import 'profile_page.dart';
 
 final navIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -101,21 +100,27 @@ class MainLayout extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => ref.read(navIndexProvider.notifier).state = index,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            )
-          ]
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: SizedBox(
+          height: double.infinity, 
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            // 2. Change to max so the column stretches
+            mainAxisSize: MainAxisSize.max, 
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              )
+            ]
+          )
         )
       )
     );
