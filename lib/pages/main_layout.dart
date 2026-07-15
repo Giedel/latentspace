@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'dashboard_page.dart';
 import 'todos_page.dart';
 import 'money_page.dart';
+import '../features/dashboard/presentation/widgets/multimodal_input_sheet.dart';
 
 final navIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -31,8 +32,13 @@ class MainLayout extends ConsumerWidget {
 
       // Floating Action Button
       floatingActionButton: FloatingActionButton(
-        onPressed:() {
-          // TODO: Open Multimodal Input (text, voice, image)
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true, // Allows the sheet to adjust for the keyboard
+            backgroundColor: Colors.transparent, // Keeps our custom rounded container styling
+            builder: (context) => const MultimodalInputSheet(),
+          );
         },
         elevation: 4,
         child: const Icon(Icons.add, size: 28),

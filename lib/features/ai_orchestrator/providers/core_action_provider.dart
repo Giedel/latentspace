@@ -2,6 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/core_ai_action.dart';
 import '../../../core/providers/database_providers.dart';
+import '../../services/slm_service.dart';
+
+final slmServiceProvider = Provider<SlmService>((ref) {
+  return SlmService();
+});
 
 class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
   CoreActionNotifier(this.ref) : super(const AsyncValue.loading()) {
@@ -46,6 +51,17 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
     }
   }
 
+  // Takes raw text, passes it to the AI, and saves the pending result
+  Future<void> submitRawPrompt(String prompt) async {
+    // 1. Get the AI service
+    final slm = ref.read(slmServiceProvider);
+    
+    // 2. Process the text (simulated SLM extraction)
+    final pendingAction = await slm.processInput(prompt);
+    
+    // 3. Save to the database, which will automatically update the UI
+    await addAction(pendingAction);
+  }
 }
 
   // The provider that the UI will listen to for changes in the list of actions

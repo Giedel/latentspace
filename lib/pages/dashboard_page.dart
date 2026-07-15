@@ -29,7 +29,7 @@ class DashboardPage extends ConsumerWidget {
                 data: (actions) {
                   final pending = actions.where((a) => a.status == 'PENDING').toList();
                   if (pending.isEmpty) return const SizedBox.shrink();
-                  return _buildPendingActions(pending);
+                  return _buildPendingActions(context, ref, pending);
                 },
                 orElse: () => const SizedBox.shrink(),
               ),
@@ -145,35 +145,118 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingActions(List<CoreAiAction> pendingActions) {
+  Widget _buildPendingActions(BuildContext context, WidgetRef ref, List<CoreAiAction> pendingActions) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader('Needs Your Review', 'Clear all'),
         const SizedBox(height: 16),
-        ...pendingActions.map((action) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF4E5), // Light orange warning hue
+        ...pendingActions.map((action) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showReviewDialog(context, ref, action), // Opens the HITL Dialog
             borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.psychology, color: Colors.orange),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Extracted a ${action.inferredDomain.toLowerCase()} from: "${action.rawUserInput}"',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                ),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4E5), // Light orange warning hue
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)), // Added a subtle border
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+              child: Row(
+                children: [
+                  const Icon(Icons.psychology, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Review ${action.inferredDomain.toLowerCase()}: "${action.rawUserInput}"',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
           ),
         )),
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  void _showReviewDialog(BuildContext context, WidgetRef ref, CoreAiAction action) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          title: Row(
+            children: [
+              Icon(
+                action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet : Icons.check_circle_outline, 
+                color: const Color(0xFF6B4FA0)
+              ),
+              const SizedBox(width: 8),
+              const Text('Confirm Action', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('"${action.rawUserInput}"', style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+              const SizedBox(height: 16),
+              const Text('Extracted Data:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAFAFA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                width: double.infinity,
+                child: Text(
+                  action.jsonPayload.toString(), 
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Reject Action: Updates SQLite status to FAILED
+                final rejectedAction = action.copyWith(status: 'FAILED');
+                ref.read(coreActionNotifierProvider.notifier).updateAction(rejectedAction);
+                Navigator.pop(context); // Close dialog
+              },
+              child: const Text('Reject', style: TextStyle(color: Colors.redAccent)),
+            ),
+            FilledButton(
+              onPressed: () {
+                // Approve Action: Updates SQLite status to COMPLETED
+                final approvedAction = action.copyWith(status: 'COMPLETED');
+                ref.read(coreActionNotifierProvider.notifier).updateAction(approvedAction);
+                Navigator.pop(context); // Close dialog
+                
+                // Show a quick success snackbar
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${action.inferredDomain} saved successfully!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                  )
+                );
+              },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
+              child: const Text('Approve'),
+            ),
+          ],
+        );
+      }
     );
   }
 

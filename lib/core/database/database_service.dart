@@ -19,6 +19,8 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'latent.db');
 
+    print('DATABASE PATH: $path');
+
     return await openDatabase(
       path,
       version: 1,
