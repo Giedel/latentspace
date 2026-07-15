@@ -19,13 +19,14 @@ class AdminTask {
 
   factory AdminTask.fromMap(Map<String, dynamic> map) {
     return AdminTask(
-      taskId: map['task_id'] as int?,
-      actionId: map['action_id'] as String,
-      title: map['title'] as String,
-      description: map['description'] as String?,
-      dueDate: map['due_date'] as String?,
-      isRecurring: map['is_recurring'] as int,
-      completionStatus: map['completion_status'] as int,
+      // Using 'num?' prevents crashes if SQLite accidentally returns a double instead of an int
+      taskId: (map['task_id'] as num?)?.toInt(),
+      actionId: map['action_id'].toString(),
+      title: map['title'].toString(),
+      description: map['description']?.toString(),
+      dueDate: map['due_date']?.toString(),
+      isRecurring: (map['is_recurring'] as num?)?.toInt() ?? 0,
+      completionStatus: (map['completion_status'] as num?)?.toInt() ?? 0,
     );
   }
 }

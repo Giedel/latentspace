@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:latentspace/pages/profile_page.dart';
 import 'dashboard_page.dart';
 import 'todos_page.dart';
 import 'money_page.dart';
@@ -20,7 +21,7 @@ class MainLayout extends ConsumerWidget {
       const DashboardPage(),
       const TodosPage(),
       const MoneyPage(),
-      const Center(child: Text('Profile Page')), // Profile placeholder
+      const ProfilePage(), // Profile placeholder
     ];
 
     return Scaffold(
