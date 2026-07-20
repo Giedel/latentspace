@@ -1,52 +1,29 @@
-import 'package:uuid/uuid.dart';
+import '../../../core/database/action_dependency_repository.dart';
+import '../data/core_action_repository.dart';
 import '../models/core_ai_action.dart';
+import 'slm_inference_engine.dart';
 
 class SlmService {
-  final _uuid = const Uuid();
+  final SlmInferenceEngine _engine = SlmInferenceEngine();
+  final CoreActionRepository _repo = CoreActionRepository();
+  final ActionDependencyRepository _dependencyRepo = ActionDependencyRepository();
 
+  /// Processes raw multimodal input via the SLM Inference Engine semantic middleware
   Future<CoreAiAction> processInput(String prompt) async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    // Run local quantized SLM semantic middleware inference
+    final result = await _engine.runInference(prompt);
 
-    String inferredDomain = 'NOTE';
-    Map<String, dynamic> payload = {};
-    String executionStrategy = 'SINGLE_PASS';
+    // Save primary action
+    await _repo.insert(result.primaryAction);
 
-    final text = prompt.toLowerCase();
-
-    if (text.contains('remind') || text.contains('task')) {
-      inferredDomain = 'TO-DO'; // Updated domain mapping
-      payload = {
-        // Maps exactly to domain_admin_tasks columns
-        'title': prompt.replaceAll(RegExp(r'remind me to |task: ', caseSensitive: false), '').trim(),
-        'description': 'Auto-extracted from: "$prompt"',
-        'due_date': DateTime.now().add(const Duration(hours: 2)).toIso8601String(),
-        'is_recurring': 0,
-        'completion_status': 0,
-      };
-    } else if (text.contains('spent') || text.contains('bought')) {
-      inferredDomain = 'FINANCE'; // Updated domain mapping
-      payload = {
-        // Maps exactly to domain_finance_ledger columns
-        'transaction_type': 'EXPENSE',
-        'amount_cents': 15000, // Hardcoded for mock: 150.00 PHP = 15000 cents
-        'currency': 'PHP',
-        'primary_category': 'Food & Beverage',
-        'sub_category': 'Uncategorized',
-        'transaction_date': DateTime.now().toIso8601String(),
-      };
-    } else {
-      inferredDomain = 'NOTE';
-      payload = { 'content': prompt };
+    // Save any sub-actions and DAG dependency links
+    for (var subAction in result.subActions) {
+      await _repo.insert(subAction);
+    }
+    for (var dep in result.dependencies) {
+      await _dependencyRepo.addDependency(dep);
     }
 
-    return CoreAiAction(
-      actionId: _uuid.v4(),
-      rawUserInput: prompt,
-      inferredDomain: inferredDomain,
-      executionStrategy: executionStrategy,
-      jsonPayload: payload,
-      status: 'PENDING',
-      createdAt: DateTime.now(),
-    );
+    return result.primaryAction;
   }
 }

@@ -24,18 +24,53 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
 
     setState(() => _isProcessing = true);
 
-    // Send the text to the SLM Orchestrator
     await ref.read(coreActionNotifierProvider.notifier).submitRawPrompt(_controller.text);
 
     if (mounted) {
       setState(() => _isProcessing = false);
-      Navigator.pop(context); // Close the bottom sheet on success
+      Navigator.pop(context);
     }
+  }
+
+  void _simulateVoice() {
+    const voiceExamples = [
+      'Remind me to call Mom today at 5 PM',
+      'Spent 150 pesos on coffee at Starbucks',
+      'Don\'t forget to pay internet bill of 2500 tomorrow',
+      'Idea: Build a Flutter app with local AI capabilities',
+    ];
+    final selected = (voiceExamples..shuffle()).first;
+    setState(() {
+      _controller.text = selected;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Voice transcribed: "$selected"'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _simulateOcr() {
+    const ocrExamples = [
+      'Receipt: Paid 480.00 for grocery items',
+      'Invoice: Electricity bill 3200 PHP due on Friday',
+      'Note scan: Team sync meeting on Monday morning',
+    ];
+    final selected = (ocrExamples..shuffle()).first;
+    setState(() {
+      _controller.text = selected;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Scanned text from camera: "$selected"'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Gets the keyboard height so the sheet floats exactly above it
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -56,11 +91,20 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'What do you need to remember?',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'What do you need to remember?',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           TextField(
             controller: _controller,
             autofocus: true,
@@ -70,8 +114,35 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
             onSubmitted: (_) => _submit(),
             decoration: const InputDecoration(
               hintText: 'e.g., "Remind me to call Mom at 5 PM" or "Spent 150 on coffee"',
-              hintStyle: TextStyle(color: Colors.black26),
+              hintStyle: TextStyle(color: Colors.black26, fontSize: 14),
               border: InputBorder.none,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Suggestion Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.coffee_rounded, size: 16, color: Colors.orange),
+                  label: const Text('Spent 150 on coffee', style: TextStyle(fontSize: 12)),
+                  onPressed: () => setState(() => _controller.text = 'Spent 150 on coffee'),
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  avatar: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF6B4FA0)),
+                  label: const Text('Remind me to call Mom at 5 PM', style: TextStyle(fontSize: 12)),
+                  onPressed: () => setState(() => _controller.text = 'Remind me to call Mom at 5 PM'),
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  avatar: const Icon(Icons.lightbulb_outline_rounded, size: 16, color: Colors.amber),
+                  label: const Text('Idea for mobile app', style: TextStyle(fontSize: 12)),
+                  onPressed: () => setState(() => _controller.text = 'Idea for mobile app layout design'),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -81,24 +152,31 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.mic, color: Color(0xFF6B4FA0)),
-                    onPressed: () { /* TODO: Implement STT */ },
+                    icon: const Icon(Icons.mic_rounded, color: Color(0xFF6B4FA0)),
+                    tooltip: 'Voice Dictation (STT)',
+                    onPressed: _simulateVoice,
                   ),
                   IconButton(
                     icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF6B4FA0)),
-                    onPressed: () { /* TODO: Implement OCR */ },
+                    tooltip: 'Document OCR Scan',
+                    onPressed: _simulateOcr,
                   ),
                 ],
               ),
               _isProcessing
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
                   : FilledButton(
                       onPressed: _submit,
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF6B4FA0),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
-                      child: const Text('Process'),
+                      child: const Text('Process', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
             ],
           )

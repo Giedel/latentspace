@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/widgets/custom_card.dart';
+import '../core/widgets/empty_state_widget.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 
@@ -11,26 +13,31 @@ class TrashPage extends ConsumerWidget {
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         title: const Text('Trash Bin', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+            tooltip: 'Empty Trash',
+            onPressed: () => _confirmEmptyTrash(context, ref),
+          ),
+        ],
       ),
       body: actionsState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error loading Trash: $err')),
         data: (actions) {
-          // Trashed items correspond to core action status == 'FAILED'
-          final trashedActions = actions.where((a) => a.status == 'FAILED').toList();
+          final trashedActions = actions.where((a) => a.status == 'FAILED' || a.status == 'REJECTED').toList();
 
           if (trashedActions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.delete_outline_rounded, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('Trash is empty', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
-                ],
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.delete_outline_rounded,
+              title: 'Trash Bin is empty',
+              message: 'Items moved to trash will appear here for recovery or deletion.',
             );
           }
 
@@ -52,32 +59,69 @@ class TrashPage extends ConsumerWidget {
     final iconColors = [Colors.deepPurple, Colors.orange, Colors.green];
     final colorIndex = action.actionId.hashCode.abs() % bgColors.length;
 
-    return Card(
+    return CustomCard(
       margin: const EdgeInsets.only(bottom: 12),
-      color: bgColors[colorIndex],
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(
-          action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
-              : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
-              : Icons.check_circle_outline_rounded,
-          color: iconColors[colorIndex],
-        ),
-        title: Text(
-          action.rawUserInput,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        subtitle: Text(
-          'Moved to trash on: ${action.createdAt.month}/${action.createdAt.day}',
-          style: const TextStyle(fontSize: 11, color: Colors.black38),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        onTap: () => _showTrashedItemPreview(context, ref, action, bgColors[colorIndex], iconColors[colorIndex]),
+      backgroundColor: bgColors[colorIndex],
+      onTap: () => _showTrashedItemPreview(context, ref, action, bgColors[colorIndex], iconColors[colorIndex]),
+      child: Row(
+        children: [
+          Icon(
+            action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
+                : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
+                : Icons.check_circle_outline_rounded,
+            color: iconColors[colorIndex],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.rawUserInput,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Moved to trash: ${action.createdAt.month}/${action.createdAt.day}',
+                  style: const TextStyle(fontSize: 11, color: Colors.black45),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+        ],
       ),
+    );
+  }
+
+  void _confirmEmptyTrash(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Empty Trash?'),
+          content: const Text('All items in the trash bin will be permanently deleted. This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                ref.read(coreActionNotifierProvider.notifier).emptyTrash();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Trash bin emptied'), backgroundColor: Colors.redAccent),
+                );
+              },
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: const Text('Empty Trash'),
+            )
+          ],
+        );
+      },
     );
   }
 
@@ -87,7 +131,7 @@ class TrashPage extends ConsumerWidget {
       CoreAiAction action,
       Color bgColor,
       Color iconColor
-      ) {
+  ) {
     showDialog(
       context: context,
       builder: (context) {
@@ -99,13 +143,6 @@ class TrashPage extends ConsumerWidget {
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                )
-              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -114,22 +151,20 @@ class TrashPage extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.lock_clock_rounded, color: iconColor),
+                      Icon(Icons.auto_delete_rounded, color: iconColor),
                       const SizedBox(width: 8),
                       const Text(
-                          'Trashed Item Preview',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)
+                        'Trashed Item Preview',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // The uneditable raw conversational phrase
+                  const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: Colors.white.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -139,10 +174,6 @@ class TrashPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  const Text('Details (Uneditable in Trash)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54)),
-                  const SizedBox(height: 8),
-
-                  // Detail list based on the target category
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
@@ -151,36 +182,36 @@ class TrashPage extends ConsumerWidget {
                     ),
                   ),
 
-                  // Actions row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close', style: TextStyle(color: Colors.black54)),
+                      TextButton.icon(
+                        onPressed: () {
+                          ref.read(coreActionNotifierProvider.notifier).deleteActionPermanently(action.actionId);
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Item deleted permanently')),
+                          );
+                        },
+                        icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 18),
+                        label: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
                       ),
                       FilledButton.icon(
                         onPressed: () {
-                          // RESTORE OPTION: Revert state status to COMPLETED
-                          final restoredAction = action.copyWith(status: 'COMPLETED');
-                          ref.read(coreActionNotifierProvider.notifier).updateAction(restoredAction);
+                          final restored = action.copyWith(status: 'COMPLETED');
+                          ref.read(coreActionNotifierProvider.notifier).updateAction(restored);
 
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Item restored successfully!'),
+                            const SnackBar(
+                              content: Text('Item restored successfully!'),
                               backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           );
                         },
                         icon: const Icon(Icons.restore_rounded, size: 18),
                         label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF6B4FA0),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
                       )
                     ],
                   )
@@ -199,7 +230,7 @@ class TrashPage extends ConsumerWidget {
       final amount = payload['amount_cents'] != null ? (payload['amount_cents'] / 100).toStringAsFixed(2) : '0.00';
       return [
         _buildPreviewRow('Amount', '${payload['currency'] ?? 'PHP'} $amount'),
-        _buildPreviewRow('Category', payload['primary_category'] ?? 'Uncategorized'),
+        _buildPreviewRow('Category', payload['primary_category'] ?? 'General'),
       ];
     } else if (action.inferredDomain == 'TO-DO' || action.inferredDomain == 'REMINDER') {
       return [

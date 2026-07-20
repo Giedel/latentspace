@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
+import '../../ai_orchestrator/models/core_ai_action.dart';
 import '../../ai_orchestrator/providers/core_action_provider.dart';
 import '../models/admin_task.dart';
 
 class TaskRepository {
   final DatabaseService _dbService = DatabaseService();
+  final _uuid = const Uuid();
 
   /// Fetches tasks limited for the Dashboard
   Future<List<AdminTask>> getUpcomingTasks() async {
@@ -24,9 +26,47 @@ class TaskRepository {
     final db = await _dbService.database;
     final maps = await db.query(
       'domain_admin_tasks',
-      orderBy: 'completion_status ASC, due_date ASC', // Uncompleted tasks bubble to the top
+      orderBy: 'completion_status ASC, due_date ASC',
     );
     return maps.map((map) => AdminTask.fromMap(map)).toList();
+  }
+
+  /// Creates a task directly in DB
+  Future<void> createTaskDirectly(String title, {String? dueDate, String? description}) async {
+    final db = await _dbService.database;
+    final actionId = _uuid.v4();
+    final now = DateTime.now();
+
+    final payload = {
+      'title': title,
+      'description': description ?? 'Manual task entry',
+      'due_date': dueDate ?? now.add(const Duration(hours: 4)).toIso8601String(),
+      'is_recurring': 0,
+      'completion_status': 0,
+    };
+
+    // 1. Insert Core Action record
+    final action = CoreAiAction(
+      actionId: actionId,
+      rawUserInput: title,
+      inferredDomain: 'TO-DO',
+      executionStrategy: 'SINGLE_PASS',
+      jsonPayload: payload,
+      status: 'COMPLETED',
+      createdAt: now,
+    );
+
+    await db.insert('core_ai_actions', action.toMap());
+
+    // 2. Insert Domain Admin Task record
+    await db.insert('domain_admin_tasks', {
+      'action_id': actionId,
+      'title': title,
+      'description': description,
+      'due_date': payload['due_date'],
+      'is_recurring': 0,
+      'completion_status': 0,
+    });
   }
 
   /// Updates task completion
@@ -44,8 +84,7 @@ class TaskRepository {
   /// Deletes a task by targeting its root Core Action
   Future<void> deleteTaskByActionId(String actionId) async {
     final db = await _dbService.database;
-    // Because of your 'ON DELETE CASCADE' schema rule, deleting the core action
-    // safely obliterates the task from the domain_admin_tasks table automatically.
+    // 'ON DELETE CASCADE' schema rule automatically deletes task from domain_admin_tasks
     await db.delete('core_ai_actions', where: 'action_id = ?', whereArgs: [actionId]);
   }
 }
@@ -60,7 +99,7 @@ final upcomingTasksProvider = FutureProvider<List<AdminTask>>((ref) async {
   return repo.getUpcomingTasks();
 });
 
-/// The interactive state controller for the full Todos Page
+/// Interactive state controller for the full Todos Page
 class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
   TodosNotifier(this.ref) : super(const AsyncValue.loading()) {
     loadAllTasks();
@@ -78,11 +117,17 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
     }
   }
 
+  Future<void> addTask(String title, {String? dueDate, String? description}) async {
+    await ref.read(taskRepositoryProvider).createTaskDirectly(title, dueDate: dueDate, description: description);
+    await loadAllTasks();
+    ref.read(coreActionNotifierProvider.notifier).loadActions();
+  }
+
   Future<void> toggleCompletion(AdminTask task) async {
     if (task.taskId == null) return;
     final newStatus = task.completionStatus == 0 ? 1 : 0;
 
-    // 1. Optimistic UI Update (Makes the checkbox feel instant to the user)
+    // Optimistic UI Update
     final currentState = state.value ?? [];
     state = AsyncValue.data(currentState.map((t) {
       if (t.taskId == task.taskId) {
@@ -94,9 +139,8 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
       return t;
     }).toList());
 
-    // 2. Background DB Update
     await ref.read(taskRepositoryProvider).updateTaskStatus(task.taskId!, newStatus);
-    ref.read(coreActionNotifierProvider.notifier).loadActions(); // Syncs dashboard
+    ref.read(coreActionNotifierProvider.notifier).loadActions();
   }
 
   Future<void> editTaskTitle(AdminTask task, String newTitle) async {
@@ -121,22 +165,18 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
     state = AsyncValue.data(currentState.where((t) => t.actionId != task.actionId).toList());
 
     await ref.read(taskRepositoryProvider).deleteTaskByActionId(task.actionId);
-    ref.read(coreActionNotifierProvider.notifier).loadActions(); // Syncs dashboard
+    ref.read(coreActionNotifierProvider.notifier).loadActions();
   }
 
-  // Handles drag-and-drop reordering in local memory
   void reorderTasks(int oldIndex, int newIndex) {
     final currentState = List<AdminTask>.from(state.value ?? []);
-
-    // The manual newIndex -= 1 math has been removed because Flutter does it now!
     final item = currentState.removeAt(oldIndex);
     currentState.insert(newIndex, item);
-
     state = AsyncValue.data(currentState);
   }
 }
 
 final todosNotifierProvider = StateNotifierProvider<TodosNotifier, AsyncValue<List<AdminTask>>>((ref) {
-  ref.watch(coreActionNotifierProvider); // Auto-refreshes when AI extracts a new task
+  ref.watch(coreActionNotifierProvider);
   return TodosNotifier(ref);
 });

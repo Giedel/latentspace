@@ -1,18 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/widgets/app_search_bar.dart';
+import '../core/widgets/custom_card.dart';
+import '../core/widgets/empty_state_widget.dart';
+import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 import '../features/user_tasks/providers/task_provider.dart';
+import 'agentic_assistant_page.dart';
+import 'main_layout.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning, Giedel! 👋';
+    if (hour < 17) return 'Good afternoon, Giedel! ☀️';
+    return 'Good evening, Giedel! 🌙';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA), // Clean off-white background
+      backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -20,12 +47,23 @@ class DashboardPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 24),
-              _buildSearchBar(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               
-              // Human-In-The-Loop (HITL) Validation Section
-              // Only appears if the SLM has extracted data waiting for approval
+              // Quantized SLM Model Status Card
+              const SlmModelCard(),
+              const SizedBox(height: 20),
+
+              AppSearchBar(
+                controller: _searchController,
+                hintText: 'Search notes, tasks, or prompt history...',
+                onChanged: (query) {
+                  setState(() {
+                    _searchQuery = query.trim().toLowerCase();
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
               actionsState.maybeWhen(
                 data: (actions) {
                   final pending = actions.where((a) => a.status == 'PENDING').toList();
@@ -35,15 +73,20 @@ class DashboardPage extends ConsumerWidget {
                 orElse: () => const SizedBox.shrink(),
               ),
 
-              _buildSectionHeader('Upcoming', 'View all'),
-              const SizedBox(height: 16),
+              _buildSectionHeader('Upcoming Tasks', 'View all', () {
+                ref.read(navIndexProvider.notifier).state = 1;
+              }),
+              const SizedBox(height: 14),
               _buildUpcomingTasks(ref),
+
+              const SizedBox(height: 28),
               
-              const SizedBox(height: 32),
-              _buildSectionHeader('Recent Notes', 'View all'),
-              const SizedBox(height: 16),
+              _buildSectionHeader('Recent Notes', 'View all', () {
+                ref.read(navIndexProvider.notifier).state = 3;
+              }),
+              const SizedBox(height: 14),
               _buildRecentNotes(ref),
-              const SizedBox(height: 32), // Bottom padding
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -57,17 +100,24 @@ class DashboardPage extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.menu, size: 28),
-            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.hub_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
+            ),
+            const SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Good morning, Giedel! 👋',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  _getGreeting(),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  'Capture ideas. Stay organized.',
+                const Text(
+                  'On-device SLM Personal Administrator',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -76,14 +126,25 @@ class DashboardPage extends ConsumerWidget {
         ),
         Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, size: 24),
-            const SizedBox(width: 16),
+            IconButton(
+              icon: const Icon(Icons.smart_toy_outlined, size: 24, color: Color(0xFF6B4FA0)),
+              tooltip: 'Agentic Assistant Console',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AgenticAssistantPage()),
+                );
+              },
+            ),
             Stack(
               children: [
-                const Icon(Icons.notifications_none, size: 28),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, size: 26),
+                  onPressed: () {},
+                ),
                 Positioned(
-                  right: 2,
-                  top: 2,
+                  right: 8,
+                  top: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
@@ -100,37 +161,7 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Search notes...',
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, String actionText) {
+  Widget _buildSectionHeader(String title, String actionText, VoidCallback onAction) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -138,9 +169,16 @@ class DashboardPage extends ConsumerWidget {
           title,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        Text(
-          actionText,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF6B4FA0), fontWeight: FontWeight.w600),
+        InkWell(
+          onTap: onAction,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Text(
+              actionText,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B4FA0), fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
       ],
     );
@@ -150,227 +188,253 @@ class DashboardPage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Needs Your Review', 'Clear all'),
-        const SizedBox(height: 16),
-        ...pendingActions.map((action) => Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _showReviewDialog(context, ref, action), // Opens the HITL Dialog
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF4E5), // Light orange warning hue
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)), // Added a subtle border
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.psychology, color: Colors.orange),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Review ${action.inferredDomain.toLowerCase()}: "${action.rawUserInput}"',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
-                ],
-              ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Needs Your Review',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
             ),
+            TextButton(
+              onPressed: () {
+                for (var action in pendingActions) {
+                  ref.read(coreActionNotifierProvider.notifier).updateAction(
+                    action.copyWith(status: 'REJECTED'),
+                  );
+                }
+              },
+              child: const Text('Dismiss all', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            )
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...pendingActions.map((action) => CustomCard(
+          margin: const EdgeInsets.only(bottom: 10),
+          backgroundColor: const Color(0xFFFFF4E5),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          onTap: () => _showEditableReviewDialog(context, ref, action),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.psychology_rounded, color: Colors.deepOrange, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Review ${action.inferredDomain.toLowerCase()}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '"${action.rawUserInput}"',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            ],
           ),
         )),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  void _showReviewDialog(BuildContext context, WidgetRef ref, CoreAiAction action) {
+  void _showEditableReviewDialog(BuildContext context, WidgetRef ref, CoreAiAction action) {
+    final domain = action.inferredDomain;
+    final Map<String, dynamic> mutablePayload = Map<String, dynamic>.from(action.jsonPayload);
+
+    final titleController = TextEditingController(
+      text: mutablePayload['title']?.toString() ?? mutablePayload['content']?.toString() ?? action.rawUserInput,
+    );
+    final amountController = TextEditingController(
+      text: mutablePayload['amount_cents'] != null
+          ? (mutablePayload['amount_cents'] / 100).toStringAsFixed(2)
+          : '0.00',
+    );
+    String selectedCategory = mutablePayload['primary_category']?.toString() ?? 'General';
+    String selectedType = mutablePayload['transaction_type']?.toString() ?? 'EXPENSE';
+
     showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                // Updated to _rounded icons
-                Icon(
-                    action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
-                        : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Row(
+                children: [
+                  Icon(
+                    domain == 'FINANCE' ? Icons.account_balance_wallet_rounded
+                        : domain == 'NOTE' ? Icons.note_alt_rounded
                         : Icons.check_circle_outline_rounded,
-                    color: const Color(0xFF6B4FA0)
-                ),
-                const SizedBox(width: 12),
-                Text(
-                    'Review ${action.inferredDomain}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // The original conversational input
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFAFAFA),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    color: const Color(0xFF6B4FA0),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Updated to _rounded
-                      const Icon(Icons.format_quote_rounded, color: Colors.grey, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          action.rawUserInput,
-                          style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87, fontSize: 13),
+                  const SizedBox(width: 10),
+                  Text('Review $domain', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.format_quote_rounded, color: Colors.grey, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              action.rawUserInput,
+                              style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Extracted Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 12),
+
+                    if (domain == 'FINANCE') ...[
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Amount (PHP)',
+                          prefixIcon: Icon(Icons.attach_money_rounded),
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                    ],
-                  ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: ['EXPENSE', 'INCOME'].contains(selectedType) ? selectedType : 'EXPENSE',
+                        decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                        items: const [
+                          DropdownMenuItem(value: 'EXPENSE', child: Text('Expense')),
+                          DropdownMenuItem(value: 'INCOME', child: Text('Income')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedType = val);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: ['Food & Beverage', 'Groceries', 'Transportation', 'Utilities', 'Shopping', 'Income', 'General'].contains(selectedCategory) ? selectedCategory : 'General',
+                        decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                        items: const [
+                          DropdownMenuItem(value: 'Food & Beverage', child: Text('Food & Beverage')),
+                          DropdownMenuItem(value: 'Groceries', child: Text('Groceries')),
+                          DropdownMenuItem(value: 'Transportation', child: Text('Transportation')),
+                          DropdownMenuItem(value: 'Utilities', child: Text('Utilities')),
+                          DropdownMenuItem(value: 'Shopping', child: Text('Shopping')),
+                          DropdownMenuItem(value: 'Income', child: Text('Income')),
+                          DropdownMenuItem(value: 'General', child: Text('General')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedCategory = val);
+                        },
+                      ),
+                    ] else if (domain == 'TO-DO' || domain == 'REMINDER') ...[
+                      TextField(
+                        controller: titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Task Title',
+                          prefixIcon: Icon(Icons.check_box_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: titleController,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          labelText: 'Note Content',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
-
-                const SizedBox(height: 20),
-                const Text('Extracted Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 12),
-
-                // Human-Readable Parsed Data (Icons removed)
-                _buildHumanReadablePayload(action.inferredDomain, action.jsonPayload),
-              ],
-            ),
-            actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  final rejectedAction = action.copyWith(status: 'FAILED');
-                  ref.read(coreActionNotifierProvider.notifier).updateAction(rejectedAction);
-                  Navigator.pop(context);
-                },
-                child: const Text('Discard', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
               ),
-              FilledButton(
-                onPressed: () async {
-                  await ref.read(coreActionNotifierProvider.notifier).approveAndRouteAction(action);
-
-                  if (context.mounted) {
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    final rejected = action.copyWith(status: 'REJECTED');
+                    ref.read(coreActionNotifierProvider.notifier).updateAction(rejected);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  },
+                  child: const Text('Discard', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    if (domain == 'FINANCE') {
+                      final amt = double.tryParse(amountController.text.trim()) ?? 10.0;
+                      mutablePayload['amount_cents'] = (amt * 100).round();
+                      mutablePayload['transaction_type'] = selectedType;
+                      mutablePayload['primary_category'] = selectedCategory;
+                    } else if (domain == 'TO-DO' || domain == 'REMINDER') {
+                      mutablePayload['title'] = titleController.text.trim();
+                    } else {
+                      mutablePayload['content'] = titleController.text.trim();
+                    }
+
+                    await ref.read(coreActionNotifierProvider.notifier).approveAndRouteAction(
+                      action,
+                      customPayload: mutablePayload,
+                    );
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${action.inferredDomain} saved successfully!'),
+                          content: Text('$domain approved & saved!'),
                           backgroundColor: Colors.green,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        )
-                    );
-                  }
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF6B4FA0),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                child: const Text('Approve & Save', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        }
-    );
-  }
-
-  /// Helper widget to parse the JSON into a beautiful UI based on the domain
-  Widget _buildHumanReadablePayload(String domain, Map<String, dynamic> payload) {
-    List<Widget> rows = [];
-
-    if (domain == 'FINANCE') {
-      final amount = payload['amount_cents'] != null ? (payload['amount_cents'] / 100).toStringAsFixed(2) : '0.00';
-      final currency = payload['currency'] ?? 'PHP';
-
-      // Removed the IconData parameter from _buildDetailRow calls
-      rows = [
-        _buildDetailRow('Amount', '$currency $amount', valueColor: Colors.green.shade700),
-        _buildDetailRow('Category', payload['primary_category'] ?? 'N/A'),
-        _buildDetailRow('Type', payload['transaction_type'] ?? 'N/A'),
-      ];
-    }
-    else if (domain == 'TO-DO' || domain == 'REMINDER') {
-      String readableDate = 'No date set';
-      if (payload['due_date'] != null) {
-        final date = DateTime.tryParse(payload['due_date'].toString());
-        if (date != null) {
-          readableDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-        }
-      }
-
-      rows = [
-        _buildDetailRow('Task', payload['title'] ?? 'N/A'),
-        _buildDetailRow('Due', readableDate),
-      ];
-    }
-    else if (domain == 'NOTE') {
-      rows = [
-        _buildDetailRow('Content', payload['content'] ?? 'N/A'),
-      ];
-    }
-    else {
-      rows = payload.entries.map((e) => _buildDetailRow(e.key, e.value.toString())).toList();
-    }
-
-    return Column(children: rows);
-  }
-
-  /// Small helper to render consistent rows for the extracted data
-  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: valueColor ?? Colors.black87,
-              ),
-            ),
-          ),
-        ],
-      ),
+                        ),
+                      );
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6B4FA0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Approve & Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                )
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildUpcomingTasks(WidgetRef ref) {
-    // Listen to the SQLite task database
     final tasksState = ref.watch(upcomingTasksProvider);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
+    return CustomCard(
+      padding: EdgeInsets.zero,
       child: tasksState.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(32.0),
@@ -381,21 +445,25 @@ class DashboardPage extends ConsumerWidget {
           child: Text('Error loading tasks: $err'),
         ),
         data: (tasks) {
-          if (tasks.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(child: Text('No upcoming tasks.', style: TextStyle(color: Colors.grey))),
+          final filtered = _searchQuery.isEmpty
+              ? tasks
+              : tasks.where((t) => t.title.toLowerCase().contains(_searchQuery)).toList();
+
+          if (filtered.isEmpty) {
+            return const EmptyStateWidget(
+              icon: Icons.check_circle_outline_rounded,
+              title: 'No upcoming tasks',
+              message: 'You are all caught up!',
             );
           }
 
           return Column(
-            children: tasks.asMap().entries.map((entry) {
+            children: filtered.asMap().entries.map((entry) {
               final index = entry.key;
               final task = entry.value;
-              final isLast = index == tasks.length - 1;
+              final isLast = index == filtered.length - 1;
 
-              // Parse date for UI
-              String timeDisplay = 'No date';
+              String timeDisplay = 'No due date';
               if (task.dueDate != null) {
                 final d = DateTime.tryParse(task.dueDate!);
                 if (d != null) {
@@ -405,15 +473,39 @@ class DashboardPage extends ConsumerWidget {
 
               return Column(
                 children: [
-                  _buildTaskItem(
-                      Icons.check_circle_outline,
+                  ListTile(
+                    onTap: () {
+                      ref.read(todosNotifierProvider.notifier).toggleCompletion(task);
+                    },
+                    leading: Checkbox(
+                      value: task.completionStatus == 1,
+                      activeColor: const Color(0xFF6B4FA0),
+                      onChanged: (_) {
+                        ref.read(todosNotifierProvider.notifier).toggleCompletion(task);
+                      },
+                    ),
+                    title: Text(
                       task.title,
-                      timeDisplay,
-                      'Pending',
-                      Colors.deepPurple,
-                      const Color(0xFFF3E5F5)
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        decoration: task.completionStatus == 1 ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    subtitle: Text(timeDisplay, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E5F5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Pending',
+                        style: TextStyle(color: Color(0xFF6B4FA0), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                  if (!isLast) _buildDivider(),
+                  if (!isLast) Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1), indent: 56),
                 ],
               );
             }).toList(),
@@ -423,59 +515,33 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskItem(IconData icon, String title, String time, String status, Color accentColor, Color bgColor) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: accentColor, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
-            ),
-          ),
-          Text(status, style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 8),
-          CircleAvatar(radius: 3, backgroundColor: accentColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1), indent: 64, endIndent: 16);
-  }
-
   Widget _buildRecentNotes(WidgetRef ref) {
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return actionsState.maybeWhen(
       data: (actions) {
-        // Only show completed notes that are NOT trashed (status is COMPLETED)
-        final notes = actions
-            .where((a) => a.inferredDomain == 'NOTE' && a.status == 'COMPLETED')
-            .take(5)
-            .toList();
+        var notes = actions.where((a) => a.inferredDomain == 'NOTE' && a.status == 'COMPLETED').toList();
+
+        if (_searchQuery.isNotEmpty) {
+          notes = notes.where((n) {
+            final content = n.jsonPayload['content']?.toString().toLowerCase() ?? '';
+            return content.contains(_searchQuery);
+          }).toList();
+        }
 
         if (notes.isEmpty) {
-          return const SizedBox(
-              height: 100,
-              child: Center(child: Text('No recent notes.', style: TextStyle(color: Colors.grey)))
+          return const CustomCard(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text('No notes found.', style: TextStyle(color: Colors.grey)),
+              ),
+            ),
           );
         }
 
         return SizedBox(
-          height: 170,
+          height: 165,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -489,15 +555,66 @@ class DashboardPage extends ConsumerWidget {
               final iconColors = [Colors.deepPurple, Colors.orange, Colors.green];
               final colorIndex = note.actionId.hashCode.abs() % bgColors.length;
 
-              return _buildNoteCard(
-                  context,
-                  ref,
-                  note,
-                  'Quick Note',
-                  content,
-                  date,
-                  bgColors[colorIndex],
-                  iconColors[colorIndex]
+              return Container(
+                width: 170,
+                margin: const EdgeInsets.only(right: 14),
+                child: CustomCard(
+                  backgroundColor: bgColors[colorIndex],
+                  border: Border.all(color: iconColors[colorIndex].withValues(alpha: 0.2)),
+                  onTap: () => _showExpandedNoteCard(context, ref, note, bgColors[colorIndex], iconColors[colorIndex]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(Icons.description_outlined, color: iconColors[colorIndex], size: 20),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_horiz_rounded, color: Colors.grey, size: 20),
+                            padding: EdgeInsets.zero,
+                            onSelected: (val) {
+                              if (val == 'trash') {
+                                final trashed = note.copyWith(status: 'FAILED');
+                                ref.read(coreActionNotifierProvider.notifier).updateAction(trashed);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Note moved to Trash')),
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'trash',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('Move to Trash', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                                  ],
+                                ),
+                              )
+                            ],
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        note.jsonPayload['title']?.toString() ?? 'Quick Note',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: Text(
+                          content,
+                          style: const TextStyle(fontSize: 12, color: Colors.black70),
+                          overflow: TextOverflow.fade,
+                        ),
+                      ),
+                      Text(date, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    ],
+                  ),
+                ),
               );
             },
           ),
@@ -507,111 +624,23 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildNoteCard(
-      BuildContext context,
-      WidgetRef ref,
-      CoreAiAction note,
-      String title,
-      String content,
-      String date,
-      Color bgColor,
-      Color iconColor
-      ) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          // 💡 Tapping the card opens the centered, expanded editor card
-          onTap: () => _showExpandedNoteCard(context, ref, note, bgColor, iconColor),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Icon(Icons.description_outlined, color: iconColor, size: 20),
-                    // 💡 Replaced static three-dots icon with an interactive PopupMenu
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_horiz, color: Colors.grey, size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onSelected: (value) {
-                        if (value == 'trash') {
-                          // Moves the note to trash (changes status to FAILED in SQLite)
-                          final trashedNote = note.copyWith(status: 'FAILED');
-                          ref.read(coreActionNotifierProvider.notifier).updateAction(trashedNote);
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Note moved to Trash'),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          );
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        const PopupMenuItem<String>(
-                          value: 'trash',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
-                              SizedBox(width: 8),
-                              Text('Move to Trash', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Text(
-                    content,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                    overflow: TextOverflow.fade,
-                  ),
-                ),
-                Text(date, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showExpandedNoteCard(
       BuildContext context,
       WidgetRef ref,
       CoreAiAction note,
       Color bgColor,
       Color iconColor
-      ) {
+  ) {
     final textController = TextEditingController(text: note.jsonPayload['content']?.toString() ?? '');
 
     showDialog(
       context: context,
-      barrierDismissible: true, // Tap outside to dismiss without saving
       builder: (context) {
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          backgroundColor: Colors.transparent, // Allow card custom container styling
+          backgroundColor: Colors.transparent,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500), // Ensures it stays centered and middled
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(28),
@@ -626,87 +655,66 @@ class DashboardPage extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(28),
               child: Scaffold(
-                backgroundColor: Colors.transparent, // Match parent wrapper color
+                backgroundColor: Colors.transparent,
                 appBar: AppBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  scrolledUnderElevation: 0,
                   automaticallyImplyLeading: false,
                   title: Row(
                     children: [
                       Icon(Icons.edit_note_rounded, color: iconColor),
                       const SizedBox(width: 8),
-                      const Text(
-                          'Edit Note',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)
-                      ),
+                      const Text('Edit Note', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
                     ],
                   ),
                   actions: [
-                    // Save Button in the top right
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: TextButton.icon(
-                        onPressed: () {
-                          final newContent = textController.text.trim();
+                    TextButton.icon(
+                      onPressed: () {
+                        final newContent = textController.text.trim();
+                        final updatedPayload = Map<String, dynamic>.from(note.jsonPayload);
+                        updatedPayload['content'] = newContent;
 
-                          // Prepare updated JSON payload for SQLite
-                          final updatedPayload = Map<String, dynamic>.from(note.jsonPayload);
-                          updatedPayload['content'] = newContent;
+                        final updatedNote = note.copyWith(jsonPayload: updatedPayload);
+                        ref.read(coreActionNotifierProvider.notifier).updateAction(updatedNote);
 
-                          final updatedNote = note.copyWith(jsonPayload: updatedPayload);
-                          ref.read(coreActionNotifierProvider.notifier).updateAction(updatedNote);
-
-                          Navigator.pop(context); // Close the dialog
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Note saved successfully!'),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.check_rounded, size: 18),
-                        label: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: iconColor,
-                        ),
-                      ),
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Note updated!'), backgroundColor: Colors.green),
+                        );
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: TextButton.styleFrom(foregroundColor: iconColor),
                     )
                   ],
                 ),
                 body: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: textController,
-                          maxLines: null, // Makes text area auto-wrap and scrollable
-                          expands: true, // Fills the available space in the card
-                          keyboardType: TextInputType.multiline,
+                          maxLines: null,
+                          expands: true,
                           style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.5),
                           decoration: const InputDecoration(
-                            hintText: 'Write your thoughts here...',
-                            hintStyle: TextStyle(color: Colors.black26),
+                            hintText: 'Write your thoughts...',
                             border: InputBorder.none,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             'Created: ${note.createdAt.month}/${note.createdAt.day}',
-                            style: const TextStyle(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w500),
+                            style: const TextStyle(fontSize: 11, color: Colors.black45),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(color: Colors.black54, fontSize: 13)),
-                          ),
+                            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                          )
                         ],
                       )
                     ],
@@ -715,116 +723,6 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showNoteDetailSheet(BuildContext context, WidgetRef ref, CoreAiAction note, Color bgColor) {
-    final TextEditingController editController = TextEditingController(
-      text: note.jsonPayload['content']?.toString() ?? '',
-    );
-
-    // State management inside the sheet for toggling Edit Mode
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-            builder: (context, setSheetState) {
-              bool isEditing = false;
-
-              return Container(
-                margin: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                    left: 16,
-                    right: 16,
-                    top: 40
-                ),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: bgColor, // Matches the selected card color
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28), bottom: Radius.circular(28)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Quick Note',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
-                        ),
-                        Row(
-                          children: [
-                            // Discard / Move to Trash Option
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                              onPressed: () {
-                                // Setting status to FAILED marks it for the Trash/History views
-                                final trashedNote = note.copyWith(status: 'FAILED');
-                                ref.read(coreActionNotifierProvider.notifier).updateAction(trashedNote);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Note moved to Trash'),
-                                      behavior: SnackBarBehavior.floating,
-                                    )
-                                );
-                              },
-                            ),
-                            // Edit / Save Switch
-                            IconButton(
-                              icon: Icon(isEditing ? Icons.check_rounded : Icons.edit_outlined, color: const Color(0xFF6B4FA0)),
-                              onPressed: () {
-                                if (isEditing) {
-                                  // Save edited text to JSON payload
-                                  final updatedPayload = Map<String, dynamic>.from(note.jsonPayload);
-                                  updatedPayload['content'] = editController.text;
-
-                                  final updatedNote = note.copyWith(jsonPayload: updatedPayload);
-                                  ref.read(coreActionNotifierProvider.notifier).updateAction(updatedNote);
-                                }
-                                setSheetState(() {
-                                  isEditing = !isEditing;
-                                });
-                              },
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    const Divider(color: Colors.black12),
-                    const SizedBox(height: 12),
-
-                    // Dynamic view switcher based on Edit Mode
-                    isEditing
-                        ? TextField(
-                      controller: editController,
-                      maxLines: 6,
-                      autofocus: true,
-                      style: const TextStyle(fontSize: 15, color: Colors.black87),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Write your note...',
-                      ),
-                    )
-                        : Text(
-                      note.jsonPayload['content']?.toString() ?? 'Empty Note',
-                      style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.5),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Created on: ${note.createdAt.year}-${note.createdAt.month.toString().padLeft(2, '0')}-${note.createdAt.day.toString().padLeft(2, '0')}',
-                      style: const TextStyle(fontSize: 11, color: Colors.black38),
-                    ),
-                  ],
-                ),
-              );
-            }
         );
       },
     );

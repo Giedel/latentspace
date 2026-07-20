@@ -1,23 +1,36 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../models/core_ai_action.dart';
+import '../../../core/database/action_dependency_repository.dart';
+import '../../../core/database/context_memory_repository.dart';
 import '../../../core/providers/database_providers.dart';
+import '../models/core_ai_action.dart';
+import '../services/slm_inference_engine.dart';
+import '../services/slm_model_manager.dart';
 import '../services/slm_service.dart';
+
+final slmModelManagerProvider = ChangeNotifierProvider<SlmModelManager>((ref) {
+  return SlmModelManager();
+});
 
 final slmServiceProvider = Provider<SlmService>((ref) {
   return SlmService();
 });
 
+final contextMemoryRepositoryProvider = Provider<ContextMemoryRepository>((ref) {
+  return ContextMemoryRepository();
+});
+
+final actionDependencyRepositoryProvider = Provider<ActionDependencyRepository>((ref) {
+  return ActionDependencyRepository();
+});
+
 class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
   CoreActionNotifier(this.ref) : super(const AsyncValue.loading()) {
-
-    // Automatically load actions from the database when initialized
     loadActions();
   }
 
   final Ref ref;
 
-  // Fetches all actions the SQLite database
   Future<void> loadActions() async {
     try {
       state = const AsyncValue.loading();
@@ -29,64 +42,80 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
     }
   }
 
-  // Inserts a new action and refreshes the state
   Future<void> addAction(CoreAiAction action) async {
     try {
       final repo = ref.read(coreActionRepositoryProvider);
       await repo.insert(action);
-      await loadActions(); // Refresh the state after adding
+      await loadActions();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
   }
 
-  // Updates an existing action (e.g., changing status from PENDING to COMPLETED) and refreshes the state
   Future<void> updateAction(CoreAiAction action) async {
     try {
       final repo = ref.read(coreActionRepositoryProvider);
       await repo.update(action);
-      await loadActions(); // Refresh the state after updating
+      await loadActions();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
   }
 
-  // Takes raw text, passes it to the AI, and saves the pending result
-  Future<void> submitRawPrompt(String prompt) async {
-    // 1. Get the AI service
-    final slm = ref.read(slmServiceProvider);
-    
-    // 2. Process the text (simulated SLM extraction)
-    final pendingAction = await slm.processInput(prompt);
-    
-    // 3. Save to the database, which will automatically update the UI
-    await addAction(pendingAction);
+  Future<void> deleteActionPermanently(String actionId) async {
+    try {
+      final repo = ref.read(coreActionRepositoryProvider);
+      await repo.delete(actionId);
+      await loadActions();
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
   }
 
-  /// Routes an approved action's JSON payload to its specific domain table
-  Future<void> approveAndRouteAction(CoreAiAction action) async {
+  Future<void> emptyTrash() async {
     try {
       final db = await ref.read(databaseServiceProvider).database;
+      await db.delete('core_ai_actions', where: 'status = ? OR status = ?', whereArgs: ['FAILED', 'REJECTED']);
+      await loadActions();
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
 
-      // 1. Immediately flag as APPROVED in the UI while processing
-      final approvedAction = action.copyWith(status: 'APPROVED');
+  Future<void> submitRawPrompt(String prompt) async {
+    final slm = ref.read(slmServiceProvider);
+    await slm.processInput(prompt);
+    await loadActions();
+  }
+
+  Future<void> approveAndRouteAction(CoreAiAction action, {Map<String, dynamic>? customPayload}) async {
+    try {
+      final db = await ref.read(databaseServiceProvider).database;
+      final payloadToUse = customPayload ?? action.jsonPayload;
+
+      final approvedAction = action.copyWith(
+        status: 'APPROVED',
+        jsonPayload: payloadToUse,
+      );
       await updateAction(approvedAction);
 
-      // 2. Prepare the payload by injecting the Foreign Key (action_id)
-      final Map<String, dynamic> insertData = Map<String, dynamic>.from(action.jsonPayload);
+      final Map<String, dynamic> insertData = Map<String, dynamic>.from(payloadToUse);
       insertData['action_id'] = action.actionId;
 
-      // 3. Route to the correct Domain Table
       if (action.inferredDomain == 'FINANCE') {
         await db.insert('domain_finance_ledger', insertData);
       } else if (action.inferredDomain == 'TO-DO' || action.inferredDomain == 'REMINDER') {
+        insertData['is_recurring'] = insertData['is_recurring'] ?? 0;
+        insertData['completion_status'] = insertData['completion_status'] ?? 0;
+        insertData['title'] = insertData['title'] ?? action.rawUserInput;
         await db.insert('domain_admin_tasks', insertData);
       }
 
-      // 4. Finalize as COMPLETED
-      final completedAction = action.copyWith(status: 'COMPLETED');
+      final completedAction = action.copyWith(
+        status: 'COMPLETED',
+        jsonPayload: payloadToUse,
+      );
       await updateAction(completedAction);
-
     } catch (e) {
       print("ROUTING ERROR: $e");
       final failedAction = action.copyWith(status: 'FAILED');
@@ -95,7 +124,63 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
   }
 }
 
-  // The provider that the UI will listen to for changes in the list of actions
 final coreActionNotifierProvider = StateNotifierProvider<CoreActionNotifier, AsyncValue<List<CoreAiAction>>>((ref) {
   return CoreActionNotifier(ref);
+});
+
+// Chat message representation for the SLM Assistant Agentic Console
+class AssistantChatMessage {
+  final String sender; // 'user' or 'slm_assistant'
+  final String text;
+  final String? reasoningThought;
+  final String? domainExtracted;
+  final DateTime timestamp;
+
+  AssistantChatMessage({
+    required this.sender,
+    required this.text,
+    this.reasoningThought,
+    this.domainExtracted,
+    required this.timestamp,
+  });
+}
+
+class AssistantChatNotifier extends StateNotifier<List<AssistantChatMessage>> {
+  AssistantChatNotifier(this.ref)
+      : super([
+          AssistantChatMessage(
+            sender: 'slm_assistant',
+            text: 'Hello Giedel! I am your on-device SLM Personal Administrator. How can I assist you with your tasks, finances, or notes today?',
+            timestamp: DateTime.now(),
+          )
+        ]);
+
+  final Ref ref;
+  final SlmInferenceEngine _engine = SlmInferenceEngine();
+
+  Future<void> sendMessage(String text) async {
+    final userMsg = AssistantChatMessage(sender: 'user', text: text, timestamp: DateTime.now());
+    state = [...state, userMsg];
+
+    final result = await _engine.runInference(text);
+
+    // Add primary action to core ledger database
+    await ref.read(coreActionNotifierProvider.notifier).addAction(result.primaryAction);
+
+    final reply = 'Processed input as [${result.primaryAction.inferredDomain}]. Captured into core SQLite ledger with status PENDING review.';
+
+    final assistantMsg = AssistantChatMessage(
+      sender: 'slm_assistant',
+      text: reply,
+      reasoningThought: result.reasoningThought,
+      domainExtracted: result.primaryAction.inferredDomain,
+      timestamp: DateTime.now(),
+    );
+
+    state = [...state, assistantMsg];
+  }
+}
+
+final assistantChatNotifierProvider = StateNotifierProvider<AssistantChatNotifier, List<AssistantChatMessage>>((ref) {
+  return AssistantChatNotifier(ref);
 });

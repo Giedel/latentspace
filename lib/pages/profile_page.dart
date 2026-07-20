@@ -1,91 +1,230 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/widgets/custom_card.dart';
+import '../core/widgets/stat_summary_card.dart';
+import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
+import '../features/ai_orchestrator/providers/core_action_provider.dart';
+import '../features/finance_ledger/providers/finance_provider.dart';
+import '../features/user_tasks/providers/task_provider.dart';
+import 'agentic_assistant_page.dart';
 import 'history_page.dart';
 import 'trash_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actionsState = ref.watch(coreActionNotifierProvider);
+    final todosState = ref.watch(todosNotifierProvider);
+    final financeState = ref.watch(financeNotifierProvider);
+
+    int noteCount = 0;
+    int actionCount = 0;
+    actionsState.whenData((actions) {
+      actionCount = actions.length;
+      noteCount = actions.where((a) => a.inferredDomain == 'NOTE' && a.status == 'COMPLETED').length;
+    });
+
+    int completedTasks = 0;
+    todosState.whenData((tasks) {
+      completedTasks = tasks.where((t) => t.completionStatus == 1).length;
+    });
+
+    double balance = 0.0;
+    financeState.whenData((data) {
+      balance = data.totalBalance;
+    });
+
     return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Profile & SLM Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             // User Avatar Section
             const CircleAvatar(
-              radius: 50,
+              radius: 44,
               backgroundColor: Color(0xFFF3E5F5),
               child: Text(
                 'G',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Color(0xFF6B4FA0)),
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Color(0xFF6B4FA0)),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               'Giedel Dela Vega Escobido',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const Text(
               'giedel.escobido@example.com',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
-            // Operational audit trail and safety options
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.history_rounded,
-              title: 'History',
+            // Quantized SLM Model Status Card
+            const SlmModelCard(),
+            const SizedBox(height: 20),
+
+            // Live Overview Stats
+            Row(
+              children: [
+                Expanded(
+                  child: StatSummaryCard(
+                    title: 'Completed Tasks',
+                    value: '$completedTasks',
+                    icon: Icons.check_circle_outline_rounded,
+                    accentColor: const Color(0xFF6B4FA0),
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatSummaryCard(
+                    title: 'Notes Saved',
+                    value: '$noteCount',
+                    icon: Icons.description_outlined,
+                    accentColor: Colors.amber.shade800,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: StatSummaryCard(
+                    title: 'Net Balance',
+                    value: '₱${balance.toStringAsFixed(2)}',
+                    icon: Icons.account_balance_wallet_outlined,
+                    accentColor: Colors.teal,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatSummaryCard(
+                    title: 'Total Logs',
+                    value: '$actionCount',
+                    icon: Icons.history_rounded,
+                    accentColor: Colors.blueAccent,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Menu Items
+            CustomCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AgenticAssistantPage()),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.smart_toy_rounded, color: Color(0xFF6B4FA0)),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text('Agentic Assistant Console', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
+            ),
+
+            CustomCard(
+              margin: const EdgeInsets.only(bottom: 12),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const HistoryPage()),
               ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.history_rounded, color: Color(0xFF6B4FA0)),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text('History Ledger', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.delete_outline_rounded,
-              title: 'Trash Bin',
+
+            CustomCard(
+              margin: const EdgeInsets.only(bottom: 12),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const TrashPage()),
               ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text('Trash Bin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
+            ),
+
+            CustomCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('LatentSpace v1.0.0 (On-Device Gemma 2B SLM Middleware + SQLite)')),
+                );
+              },
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.info_outline_rounded, color: Colors.blue),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text('About LatentSpace Architecture', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileMenuItem(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required VoidCallback onTap,
-      }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: const Color(0xFF6B4FA0)),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        onTap: onTap,
       ),
     );
   }
