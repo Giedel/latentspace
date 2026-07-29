@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
 import '../../ai_orchestrator/models/core_ai_action.dart';
@@ -111,8 +112,10 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
     try {
       final repo = ref.read(taskRepositoryProvider);
       final tasks = await repo.getAllTasks();
+      if (!mounted) return;
       state = AsyncValue.data(tasks);
     } catch (e, stack) {
+      if (!mounted) return;
       state = AsyncValue.error(e, stack);
     }
   }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers/date_provider.dart';
 import '../core/widgets/app_search_bar.dart';
+import '../core/widgets/calendar_overlay_dialog.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
-import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 import '../features/user_tasks/providers/task_provider.dart';
-import 'agentic_assistant_page.dart';
 import 'main_layout.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -37,6 +37,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final actionsState = ref.watch(coreActionNotifierProvider);
+    final selectedDate = ref.watch(selectedDateProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -47,11 +48,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 20),
-              
-              // Quantized SLM Model Status Card
-              const SlmModelCard(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               AppSearchBar(
                 controller: _searchController,
@@ -66,7 +63,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
               actionsState.maybeWhen(
                 data: (actions) {
-                  final pending = actions.where((a) => a.status == 'PENDING').toList();
+                  final pending = actions.where((a) {
+                    final isPending = a.status == 'PENDING';
+                    final matchesDate = matchesSelectedDate(a.createdAt.toIso8601String(), selectedDate);
+                    return isPending && matchesDate;
+                  }).toList();
                   if (pending.isEmpty) return const SizedBox.shrink();
                   return _buildPendingActions(context, ref, pending);
                 },
@@ -77,7 +78,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ref.read(navIndexProvider.notifier).state = 1;
               }),
               const SizedBox(height: 14),
-              _buildUpcomingTasks(ref),
+              _buildUpcomingTasks(ref, selectedDate),
 
               const SizedBox(height: 28),
               
@@ -85,7 +86,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ref.read(navIndexProvider.notifier).state = 3;
               }),
               const SizedBox(height: 14),
-              _buildRecentNotes(ref),
+              _buildRecentNotes(ref, selectedDate),
               const SizedBox(height: 32),
             ],
           ),
@@ -116,26 +117,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   _getGreeting(),
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const Text(
-                  'On-device SLM Personal Administrator',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
               ],
             ),
           ],
         ),
         Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.smart_toy_outlined, size: 24, color: Color(0xFF6B4FA0)),
-              tooltip: 'Agentic Assistant Console',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AgenticAssistantPage()),
-                );
-              },
-            ),
+            const CalendarIconButton(),
             Stack(
               children: [
                 IconButton(
@@ -156,7 +144,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ],
             ),
           ],
-        )
+        ),
       ],
     );
   }
@@ -430,7 +418,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildUpcomingTasks(WidgetRef ref) {
+  Widget _buildUpcomingTasks(WidgetRef ref, DateTime? selectedDate) {
     final tasksState = ref.watch(upcomingTasksProvider);
 
     return CustomCard(
@@ -445,9 +433,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           child: Text('Error loading tasks: $err'),
         ),
         data: (tasks) {
-          final filtered = _searchQuery.isEmpty
+          var filtered = _searchQuery.isEmpty
               ? tasks
               : tasks.where((t) => t.title.toLowerCase().contains(_searchQuery)).toList();
+
+          if (selectedDate != null) {
+            filtered = filtered.where((t) => matchesSelectedDate(t.dueDate, selectedDate)).toList();
+          }
 
           if (filtered.isEmpty) {
             return const EmptyStateWidget(
@@ -515,12 +507,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildRecentNotes(WidgetRef ref) {
+  Widget _buildRecentNotes(WidgetRef ref, DateTime? selectedDate) {
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return actionsState.maybeWhen(
       data: (actions) {
         var notes = actions.where((a) => a.inferredDomain == 'NOTE' && a.status == 'COMPLETED').toList();
+
+        if (selectedDate != null) {
+          notes = notes.where((n) => matchesSelectedDate(n.createdAt.toIso8601String(), selectedDate)).toList();
+        }
 
         if (_searchQuery.isNotEmpty) {
           notes = notes.where((n) {
@@ -607,7 +603,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       Expanded(
                         child: Text(
                           content,
-                          style: const TextStyle(fontSize: 12, color: Colors.black70),
+                          style: const TextStyle(fontSize: 12, color: Colors.black87),
                           overflow: TextOverflow.fade,
                         ),
                       ),

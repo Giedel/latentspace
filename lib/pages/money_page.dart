@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers/date_provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/calendar_overlay_dialog.dart';
 import '../core/widgets/category_chip.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
@@ -20,6 +22,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
   @override
   Widget build(BuildContext context) {
     final financeState = ref.watch(financeNotifierProvider);
+    final selectedDate = ref.watch(selectedDateProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -29,17 +32,12 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
+          const CalendarIconButton(),
           IconButton(
             icon: const Icon(Icons.add_card_rounded, color: Color(0xFF6B4FA0)),
             onPressed: () => _showAddTransactionDialog(context),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddTransactionDialog(context),
-        backgroundColor: const Color(0xFF6B4FA0),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Add Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: financeState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -47,6 +45,10 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
         data: (data) {
           final categories = ['All', 'Food & Beverage', 'Groceries', 'Transportation', 'Utilities', 'Shopping', 'Income'];
           var logs = data.logs;
+
+          if (selectedDate != null) {
+            logs = logs.where((l) => matchesSelectedDate(l.transactionDate, selectedDate)).toList();
+          }
 
           if (_selectedCategory != 'All') {
             logs = logs.where((l) => l.primaryCategory == _selectedCategory).toList();

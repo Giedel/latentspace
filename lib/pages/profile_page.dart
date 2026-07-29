@@ -6,7 +6,6 @@ import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/finance_ledger/providers/finance_provider.dart';
 import '../features/user_tasks/providers/task_provider.dart';
-import 'agentic_assistant_page.dart';
 import 'history_page.dart';
 import 'trash_page.dart';
 
@@ -123,30 +122,6 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Menu Items
-            CustomCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AgenticAssistantPage()),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.smart_toy_rounded, color: Color(0xFF6B4FA0)),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Text('Agentic Assistant Console', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                ],
-              ),
-            ),
 
             CustomCard(
               margin: const EdgeInsets.only(bottom: 12),
@@ -192,32 +167,6 @@ class ProfilePage extends ConsumerWidget {
                   const SizedBox(width: 14),
                   const Expanded(
                     child: Text('Trash Bin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                ],
-              ),
-            ),
-
-            CustomCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('LatentSpace v1.0.0 (On-Device Gemma 2B SLM Middleware + SQLite)')),
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.info_outline_rounded, color: Colors.blue),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Text('About LatentSpace Architecture', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                 ],

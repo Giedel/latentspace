@@ -33,11 +33,14 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
 
   Future<void> loadActions() async {
     try {
+      if (!mounted) return;
       state = const AsyncValue.loading();
       final repo = ref.read(coreActionRepositoryProvider);
       final actions = await repo.getAll();
+      if (!mounted) return;
       state = AsyncValue.data(actions);
     } catch (e, stackTrace) {
+      if (!mounted) return;
       state = AsyncValue.error(e, stackTrace);
     }
   }

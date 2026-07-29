@@ -301,7 +301,7 @@ class _HistoryCardState extends State<_HistoryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B4FA0))),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.black70))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.black87))),
         ],
       ),
     );
