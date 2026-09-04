@@ -1,14 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/app_search_bar.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
+import '../core/widgets/seed_database_button.dart';
 import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 import '../features/user_tasks/providers/task_provider.dart';
 import 'agentic_assistant_page.dart';
 import 'main_layout.dart';
+
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -52,6 +55,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               // Quantized SLM Model Status Card
               const SlmModelCard(),
               const SizedBox(height: 20),
+
+              // Database Seeder (Debug Mode Only)
+              if (kDebugMode)
+                SeedDatabaseButton(
+                  onSeedComplete: () {
+                    // Refresh all providers after seeding
+                    ref.refresh(coreActionNotifierProvider);
+                    ref.refresh(todosNotifierProvider);
+                  },
+                ),
+              if (kDebugMode) const SizedBox(height: 20),
 
               AppSearchBar(
                 controller: _searchController,
@@ -607,7 +621,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       Expanded(
                         child: Text(
                           content,
-                          style: const TextStyle(fontSize: 12, color: Colors.black70),
+                          style: const TextStyle(fontSize: 12, color: Colors.black54),
                           overflow: TextOverflow.fade,
                         ),
                       ),

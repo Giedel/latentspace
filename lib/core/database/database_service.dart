@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart'; // Provides kIsWeb
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path/path.dart';
 
 class DatabaseService {
@@ -17,7 +19,16 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'latent.db');
+    String path;
+
+    if (kIsWeb) {
+      // 1. Assign web database factory
+      databaseFactory = databaseFactoryFfiWeb;
+      path = 'latent_web.db';
+    } else {
+      // 2. Mobile / Desktop path resolution
+      path = join(await getDatabasesPath(), 'latent.db');
+    }
 
     print('DATABASE PATH: $path');
 
@@ -31,6 +42,7 @@ class DatabaseService {
 
   // Enforce referential integrity on every connection
   Future<void> _onConfigure(Database db) async {
+    // Note: Web SQLite WASM also respects PRAGMA foreign_keys
     await db.execute('PRAGMA foreign_keys = ON');
   }
 

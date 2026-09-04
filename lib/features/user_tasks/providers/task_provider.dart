@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart'; // Handles StateNotifierProvider in Riverpod 3.0+
+import 'package:state_notifier/state_notifier.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
 import '../../ai_orchestrator/models/core_ai_action.dart';
@@ -100,26 +102,17 @@ final upcomingTasksProvider = FutureProvider<List<AdminTask>>((ref) async {
 });
 
 /// Interactive state controller for the full Todos Page
-class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
-  TodosNotifier(this.ref) : super(const AsyncValue.loading()) {
-    loadAllTasks();
-  }
-
-  final Ref ref;
-
-  Future<void> loadAllTasks() async {
-    try {
-      final repo = ref.read(taskRepositoryProvider);
-      final tasks = await repo.getAllTasks();
-      state = AsyncValue.data(tasks);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-    }
+class TodosNotifier extends AsyncNotifier<List<AdminTask>> {
+  @override
+  Future<List<AdminTask>> build() async {
+    ref.watch(coreActionNotifierProvider); // Automatically re-builds when core actions change
+    final repo = ref.read(taskRepositoryProvider);
+    return repo.getAllTasks();
   }
 
   Future<void> addTask(String title, {String? dueDate, String? description}) async {
     await ref.read(taskRepositoryProvider).createTaskDirectly(title, dueDate: dueDate, description: description);
-    await loadAllTasks();
+    ref.invalidateSelf();
     ref.read(coreActionNotifierProvider.notifier).loadActions();
   }
 
@@ -128,8 +121,8 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
     final newStatus = task.completionStatus == 0 ? 1 : 0;
 
     // Optimistic UI Update
-    final currentState = state.value ?? [];
-    state = AsyncValue.data(currentState.map((t) {
+    final currentList = state.value ?? [];
+    state = AsyncValue.data(currentList.map((t) {
       if (t.taskId == task.taskId) {
         return AdminTask(
           taskId: t.taskId, actionId: t.actionId, title: t.title, description: t.description,
@@ -146,8 +139,8 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
   Future<void> editTaskTitle(AdminTask task, String newTitle) async {
     if (task.taskId == null) return;
 
-    final currentState = state.value ?? [];
-    state = AsyncValue.data(currentState.map((t) {
+    final currentList = state.value ?? [];
+    state = AsyncValue.data(currentList.map((t) {
       if (t.taskId == task.taskId) {
         return AdminTask(
           taskId: t.taskId, actionId: t.actionId, title: newTitle, description: t.description,
@@ -161,22 +154,21 @@ class TodosNotifier extends StateNotifier<AsyncValue<List<AdminTask>>> {
   }
 
   Future<void> deleteTask(AdminTask task) async {
-    final currentState = state.value ?? [];
-    state = AsyncValue.data(currentState.where((t) => t.actionId != task.actionId).toList());
+    final currentList = state.value ?? [];
+    state = AsyncValue.data(currentList.where((t) => t.actionId != task.actionId).toList());
 
     await ref.read(taskRepositoryProvider).deleteTaskByActionId(task.actionId);
     ref.read(coreActionNotifierProvider.notifier).loadActions();
   }
 
   void reorderTasks(int oldIndex, int newIndex) {
-    final currentState = List<AdminTask>.from(state.value ?? []);
-    final item = currentState.removeAt(oldIndex);
-    currentState.insert(newIndex, item);
-    state = AsyncValue.data(currentState);
+    final currentList = List<AdminTask>.from(state.value ?? []);
+    final item = currentList.removeAt(oldIndex);
+    currentList.insert(newIndex, item);
+    state = AsyncValue.data(currentList);
   }
 }
 
-final todosNotifierProvider = StateNotifierProvider<TodosNotifier, AsyncValue<List<AdminTask>>>((ref) {
-  ref.watch(coreActionNotifierProvider);
-  return TodosNotifier(ref);
+final todosNotifierProvider = AsyncNotifierProvider<TodosNotifier, List<AdminTask>>(() {
+  return TodosNotifier();
 });
