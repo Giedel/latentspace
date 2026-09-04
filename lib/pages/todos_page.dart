@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/widgets/app_search_bar.dart';
 import '../core/widgets/category_chip.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
@@ -21,18 +20,10 @@ class _TodosPageState extends ConsumerState<TodosPage> {
   static const Color _softPurple = Color(0xFFF3E5F5);
 
   String _filterStatus = 'All'; // 'All', 'Pending', 'Completed'
-  String _searchQuery = '';
   bool _isCalendarExpanded = false;
   _CalendarViewMode _calendarViewMode = _CalendarViewMode.month;
   DateTime _visibleMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +36,14 @@ class _TodosPageState extends ConsumerState<TodosPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Sync calendar',
+            icon: const Icon(Icons.sync_rounded, color: _primaryColor),
+            onPressed: () => _showCalendarSyncDialog(context),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -59,16 +58,6 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                     child: Column(
                       children: [
                         _buildTaskCalendar(todosState.value ?? const <AdminTask>[]),
-                        const SizedBox(height: 12),
-                        AppSearchBar(
-                          controller: _searchController,
-                          hintText: 'Search tasks...',
-                          onChanged: (q) {
-                            setState(() {
-                              _searchQuery = q.trim().toLowerCase();
-                            });
-                          },
-                        ),
                         const SizedBox(height: 12),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -92,8 +81,6 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                                 onTap: () => setState(() => _filterStatus = 'Completed'),
                                 icon: Icons.check_circle_rounded,
                               ),
-                              const SizedBox(width: 8),
-                              _buildNewTaskButton(),
                             ],
                           ),
                         ),
@@ -107,6 +94,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, stack) => Center(child: Text('Error: $err')),
                   data: (tasks) {
+                    final selectedDay = _dateOnly(_selectedDate);
                     var filtered = tasks;
 
                     if (_filterStatus == 'Pending') {
@@ -115,9 +103,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                       filtered = filtered.where((t) => t.completionStatus == 1).toList();
                     }
 
-                    if (_searchQuery.isNotEmpty) {
-                      filtered = filtered.where((t) => t.title.toLowerCase().contains(_searchQuery)).toList();
-                    }
+                    filtered = filtered.where(_isTaskDueOnSelectedDate).toList();
 
                     if (filtered.isEmpty) {
                       return LayoutBuilder(
@@ -129,7 +115,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                               child: EmptyStateWidget(
                                 icon: Icons.check_circle_outline_rounded,
                                 title: _filterStatus == 'Completed' ? 'No completed tasks' : 'All caught up!',
-                                message: 'Use "New Task" above to add a task manually or use the AI prompt.',
+                                message: 'No tasks match the selected calendar date.',
                               ),
                             ),
                           );
@@ -138,6 +124,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                     }
 
                     return ReorderableListView.builder(
+                      key: ValueKey('tasks-${_filterStatus}-${selectedDay.toIso8601String()}'),
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16).copyWith(bottom: 100),
                       itemCount: filtered.length,
                       onReorderItem: (oldIndex, newIndex) {
@@ -145,7 +132,12 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                       },
                       itemBuilder: (context, index) {
                         final task = filtered[index];
-                        return _buildInteractiveTaskTile(context, ref, task, Key(task.actionId));
+                        return _buildInteractiveTaskTile(
+                          context,
+                          ref,
+                          task,
+                          ValueKey('${selectedDay.toIso8601String()}-${task.actionId}'),
+                        );
                       },
                     );
                   },
@@ -164,24 +156,6 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     final maxForControls = availableHeight - 96;
     if (maxForControls < 240) return 240;
     return maxForControls;
-  }
-
-  Widget _buildNewTaskButton() {
-    return SizedBox(
-      height: 34,
-      child: FilledButton.icon(
-        onPressed: () => _showAddTaskDialog(context),
-        icon: const Icon(Icons.add_rounded, size: 16),
-        label: const Text('New Task', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        style: FilledButton.styleFrom(
-          backgroundColor: _primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          visualDensity: VisualDensity.compact,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        ),
-      ),
-    );
   }
 
   Widget _buildInteractiveTaskTile(BuildContext context, WidgetRef ref, AdminTask task, Key key) {
@@ -428,7 +402,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   childAspectRatio: cellWidth / cellHeight,
                 ),
                 itemBuilder: (context, index) {
-                  return _buildDayCell(
+                  return _buildMonthDayCell(
                     days[index],
                     tasksByDay,
                     isCurrentMonth: days[index].month == _visibleMonth.month,
@@ -456,27 +430,18 @@ class _TodosPageState extends ConsumerState<TodosPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Expanded(child: _buildDaySchedule(tasksByDay)),
+        Expanded(child: _buildWeekSchedule(days, tasksByDay)),
       ],
     );
   }
 
-  Widget _buildDaySchedule(Map<DateTime, List<AdminTask>> tasksByDay) {
-    final selectedTasks = List<AdminTask>.from(tasksByDay[_dateOnly(_selectedDate)] ?? const <AdminTask>[])
-      ..sort((a, b) => (DateTime.tryParse(a.dueDate ?? '') ?? _selectedDate)
-          .compareTo(DateTime.tryParse(b.dueDate ?? '') ?? _selectedDate));
-
+  Widget _buildWeekSchedule(List<DateTime> days, Map<DateTime, List<AdminTask>> tasksByDay) {
     return ListView.builder(
       itemCount: 24,
       itemBuilder: (context, hour) {
-        final hourTasks = selectedTasks.where((task) {
-          final dueDate = DateTime.tryParse(task.dueDate ?? '');
-          return dueDate != null && dueDate.hour == hour;
-        }).toList();
-
         return Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          constraints: const BoxConstraints(minHeight: 46),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.12))),
           ),
@@ -486,21 +451,117 @@ class _TodosPageState extends ConsumerState<TodosPage> {
               SizedBox(
                 width: 54,
                 child: Text(
-                  '${hour.toString().padLeft(2, '0')}:00',
+                  _formatHourLabel(hour),
                   style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
                 ),
               ),
               Expanded(
-                child: hourTasks.isEmpty
-                    ? const SizedBox(height: 24)
-                    : Column(
-                        children: hourTasks.map((task) => _buildCalendarTaskPill(task)).toList(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: days.map((day) {
+                    final hourTasks = (tasksByDay[_dateOnly(day)] ?? const <AdminTask>[]).where((task) {
+                      final dueDate = DateTime.tryParse(task.dueDate ?? '');
+                      return dueDate != null && dueDate.hour == hour;
+                    }).toList();
+
+                    return Expanded(
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 38),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: hourTasks.map((task) => _buildWeekTaskBlock(task)).toList(),
+                        ),
                       ),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDaySchedule(Map<DateTime, List<AdminTask>> tasksByDay) {
+    final selectedTasks = List<AdminTask>.from(tasksByDay[_dateOnly(_selectedDate)] ?? const <AdminTask>[])
+      ..sort((a, b) => (DateTime.tryParse(a.dueDate ?? '') ?? _selectedDate)
+          .compareTo(DateTime.tryParse(b.dueDate ?? '') ?? _selectedDate));
+
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 54,
+              child: Column(
+                children: [
+                  Text(
+                    _weekdayName(_selectedDate),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${_selectedDate.day}',
+                    style: const TextStyle(fontSize: 22, color: _primaryColor, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: selectedTasks.isEmpty
+                  ? const SizedBox(height: 8)
+                  : Column(
+                      children: selectedTasks.take(3).map((task) => _buildCalendarTaskPill(task)).toList(),
+                    ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.builder(
+            itemCount: 24,
+            itemBuilder: (context, hour) {
+              final hourTasks = selectedTasks.where((task) {
+                final dueDate = DateTime.tryParse(task.dueDate ?? '');
+                return dueDate != null && dueDate.hour == hour;
+              }).toList();
+
+              return Container(
+                constraints: const BoxConstraints(minHeight: 44),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.12))),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 54,
+                      child: Text(
+                        _formatHourLabel(hour),
+                        style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Expanded(
+                      child: hourTasks.isEmpty
+                          ? const SizedBox(height: 24)
+                          : Column(
+                              children: hourTasks.map((task) => _buildCalendarTaskPill(task)).toList(),
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -537,6 +598,93 @@ class _TodosPageState extends ConsumerState<TodosPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWeekTaskBlock(AdminTask task) {
+    final isCompleted = task.completionStatus == 1;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      decoration: BoxDecoration(
+        color: isCompleted ? Colors.grey.shade200 : _primaryColor.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Text(
+        task.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: isCompleted ? Colors.grey.shade600 : Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthDayCell(
+    DateTime day,
+    Map<DateTime, List<AdminTask>> tasksByDay, {
+    bool isCurrentMonth = true,
+  }) {
+    final date = _dateOnly(day);
+    final isSelected = _isSameDay(date, _selectedDate);
+    final isToday = _isSameDay(date, DateTime.now());
+    final tasks = tasksByDay[date] ?? const <AdminTask>[];
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        setState(() {
+          _selectedDate = date;
+          _visibleMonth = DateTime(date.year, date.month);
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? _primaryColor : isToday ? _softPurple : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? _primaryColor : _primaryColor.withValues(alpha: isToday ? 0.2 : 0.08),
+          ),
+        ),
+        child: Opacity(
+          opacity: isCurrentMonth ? 1 : 0.35,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: 5,
+                child: tasks.isEmpty
+                    ? const SizedBox.shrink()
+                    : Center(
+                        child: Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : _primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -652,6 +800,12 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     return grouped;
   }
 
+  bool _isTaskDueOnSelectedDate(AdminTask task) {
+    final dueDate = DateTime.tryParse(task.dueDate ?? '');
+    if (dueDate == null) return false;
+    return _isSameDay(_dateOnly(dueDate), _dateOnly(_selectedDate));
+  }
+
   List<DateTime> _daysForMonthGrid(DateTime month) {
     final firstDay = DateTime(month.year, month.month);
     final daysBefore = firstDay.weekday - 1;
@@ -707,6 +861,13 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     return '${d.month}/${d.day} at ${d.hour}:${d.minute.toString().padLeft(2, '0')}';
   }
 
+  String _formatHourLabel(int hour) {
+    if (hour == 0) return '12 AM';
+    if (hour < 12) return '$hour AM';
+    if (hour == 12) return '12 PM';
+    return '${hour - 12} PM';
+  }
+
   void _showAddTaskDialog(BuildContext context) {
     final titleController = TextEditingController();
 
@@ -744,6 +905,70 @@ class _TodosPageState extends ConsumerState<TodosPage> {
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
               child: const Text('Create'),
             )
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCalendarSyncDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
+          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: _softPurple,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.sync_rounded, color: _primaryColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Sync Calendar',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Would you like to sync your tasks and due dates from Google Calendar or Apple Calendar?',
+            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Calendar sync will be available soon.'),
+                    backgroundColor: _primaryColor,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.sync_rounded, size: 18),
+              label: const Text('Sync'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              ),
+            ),
           ],
         );
       },

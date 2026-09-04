@@ -15,6 +15,11 @@ class MoneyPage extends ConsumerStatefulWidget {
 }
 
 class _MoneyPageState extends ConsumerState<MoneyPage> {
+  static const Color _primaryColor = AppTheme.primaryColor;
+  static const Color _surfaceBorder = Color(0xFFEAE6F2);
+  static const Color _incomeColor = Color(0xFF16A34A);
+  static const Color _expenseColor = Color(0xFFEF4444);
+
   String _selectedCategory = 'All';
 
   @override
@@ -30,16 +35,10 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_card_rounded, color: Color(0xFF6B4FA0)),
+            icon: const Icon(Icons.add_card_rounded, color: _primaryColor),
             onPressed: () => _showAddTransactionDialog(context),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddTransactionDialog(context),
-        backgroundColor: const Color(0xFF6B4FA0),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Add Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: financeState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -62,16 +61,13 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryColor, Color(0xFF9575CD)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _surfaceBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 15,
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 18,
                         offset: const Offset(0, 8),
                       )
                     ],
@@ -81,12 +77,21 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                     children: [
                       const Text(
                         'Total Balance',
-                        style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'PHP ${data.totalBalance.toStringAsFixed(2)}',
-                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFF1E1E1E), fontSize: 32, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        width: 48,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _primaryColor,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
                       ),
                     ],
                   ),
@@ -101,8 +106,8 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         title: 'Total Income',
                         value: '₱${data.totalIncome.toStringAsFixed(2)}',
                         icon: Icons.arrow_downward_rounded,
-                        accentColor: Colors.green,
-                        backgroundColor: Colors.green.shade50.withValues(alpha: 0.5),
+                        accentColor: _incomeColor,
+                        backgroundColor: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -111,8 +116,8 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         title: 'Total Expense',
                         value: '₱${data.totalExpense.toStringAsFixed(2)}',
                         icon: Icons.arrow_upward_rounded,
-                        accentColor: Colors.redAccent,
-                        backgroundColor: Colors.red.shade50.withValues(alpha: 0.5),
+                        accentColor: _expenseColor,
+                        backgroundColor: Colors.white,
                       ),
                     ),
                   ],
@@ -145,25 +150,15 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                   const EmptyStateWidget(
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'No transactions yet',
-                    message: 'Use the + button or prompt AI to record expenses or income.',
+                    message: 'Use the add-card button or prompt AI to record expenses and income.',
                   )
                 ] else ...[
                   ...logs.map((log) {
                     final amount = (log.amountCents / 100).toStringAsFixed(2);
                     final isExpense = log.transactionType == 'EXPENSE';
 
-                    IconData icon = Icons.receipt_long_rounded;
-                    if (log.primaryCategory.toLowerCase().contains('food') || log.primaryCategory.toLowerCase().contains('coffee')) {
-                      icon = Icons.coffee_rounded;
-                    } else if (log.primaryCategory.toLowerCase().contains('groceries')) {
-                      icon = Icons.shopping_basket_rounded;
-                    } else if (log.primaryCategory.toLowerCase().contains('transport')) {
-                      icon = Icons.directions_car_rounded;
-                    } else if (log.primaryCategory.toLowerCase().contains('utility')) {
-                      icon = Icons.bolt_rounded;
-                    } else if (!isExpense) {
-                      icon = Icons.attach_money_rounded;
-                    }
+                    final icon = isExpense ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+                    final directionColor = isExpense ? _expenseColor : _incomeColor;
 
                     return CustomCard(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -173,10 +168,10 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         leading: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isExpense ? Colors.red.shade50 : Colors.green.shade50,
+                            color: const Color(0xFFF6F4FA),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(icon, color: isExpense ? Colors.redAccent : Colors.green),
+                          child: Icon(icon, color: directionColor, size: 20),
                         ),
                         title: Text(log.primaryCategory, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                         subtitle: Text('${isExpense ? "Expense" : "Income"} • ${_formatDate(log.transactionDate)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -187,7 +182,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                               '${isExpense ? '-' : '+'} ${log.currency} $amount',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isExpense ? Colors.redAccent : Colors.green,
+                                color: directionColor,
                                 fontSize: 15,
                               ),
                             ),
@@ -306,7 +301,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                       }
                     }
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
+                  style: FilledButton.styleFrom(backgroundColor: _primaryColor),
                   child: const Text('Save'),
                 )
               ],

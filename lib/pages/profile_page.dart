@@ -10,6 +10,10 @@ import 'history_page.dart';
 import 'trash_page.dart';
 
 class ProfilePage extends ConsumerWidget {
+  static const Color _primaryColor = Color(0xFF6B4FA0);
+  static const Color _softPurple = Color(0xFFF3E5F5);
+  static const Color _dangerColor = Color(0xFFEF4444);
+
   const ProfilePage({super.key});
 
   @override
@@ -50,10 +54,10 @@ class ProfilePage extends ConsumerWidget {
             // User Avatar Section
             const CircleAvatar(
               radius: 44,
-              backgroundColor: Color(0xFFF3E5F5),
+              backgroundColor: _softPurple,
               child: Text(
                 'G',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Color(0xFF6B4FA0)),
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: _primaryColor),
               ),
             ),
             const SizedBox(height: 12),
@@ -75,7 +79,7 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Completed Tasks',
                     value: '$completedTasks',
                     icon: Icons.check_circle_outline_rounded,
-                    accentColor: const Color(0xFF6B4FA0),
+                    accentColor: _primaryColor,
                     backgroundColor: Colors.white,
                   ),
                 ),
@@ -85,7 +89,7 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Notes Saved',
                     value: '$noteCount',
                     icon: Icons.description_outlined,
-                    accentColor: Colors.amber.shade800,
+                    accentColor: _primaryColor,
                     backgroundColor: Colors.white,
                   ),
                 ),
@@ -99,7 +103,7 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Net Balance',
                     value: '₱${balance.toStringAsFixed(2)}',
                     icon: Icons.account_balance_wallet_outlined,
-                    accentColor: Colors.teal,
+                    accentColor: _primaryColor,
                     backgroundColor: Colors.white,
                   ),
                 ),
@@ -109,7 +113,7 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Total Logs',
                     value: '$actionCount',
                     icon: Icons.history_rounded,
-                    accentColor: Colors.blueAccent,
+                    accentColor: _primaryColor,
                     backgroundColor: Colors.white,
                   ),
                 ),
@@ -129,10 +133,10 @@ class ProfilePage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
+                      color: _softPurple.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.smart_toy_rounded, color: Color(0xFF6B4FA0)),
+                    child: const Icon(Icons.smart_toy_rounded, color: _primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -154,10 +158,10 @@ class ProfilePage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6B4FA0).withValues(alpha: 0.1),
+                      color: _softPurple.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.history_rounded, color: Color(0xFF6B4FA0)),
+                    child: const Icon(Icons.history_rounded, color: _primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -179,10 +183,10 @@ class ProfilePage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      color: _dangerColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                    child: const Icon(Icons.delete_outline_rounded, color: _dangerColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -205,10 +209,10 @@ class ProfilePage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: _softPurple.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.info_outline_rounded, color: Colors.blue),
+                    child: const Icon(Icons.info_outline_rounded, color: _primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
