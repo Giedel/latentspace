@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/stat_summary_card.dart';
-import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/finance_ledger/providers/finance_provider.dart';
 import '../features/user_tasks/providers/task_provider.dart';
@@ -66,10 +65,6 @@ class ProfilePage extends ConsumerWidget {
               'giedel.escobido@example.com',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
-            const SizedBox(height: 20),
-
-            // Quantized SLM Model Status Card
-            const SlmModelCard(),
             const SizedBox(height: 20),
 
             // Live Overview Stats

@@ -1,13 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/app_search_bar.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
-import '../core/widgets/seed_database_button.dart';
-import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
+import '../features/finance_ledger/providers/finance_provider.dart';
+import '../features/user_tasks/models/admin_task.dart';
 import '../features/user_tasks/providers/task_provider.dart';
 import 'agentic_assistant_page.dart';
 import 'main_layout.dart';
@@ -21,8 +20,11 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
+  static const double _lowBudgetThreshold = 5000;
+
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _showNotifications = false;
 
   @override
   void dispose() {
@@ -40,67 +42,246 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final actionsState = ref.watch(coreActionNotifierProvider);
+    final todosState = ref.watch(todosNotifierProvider);
+    final financeState = ref.watch(financeNotifierProvider);
+    final notifications = _buildNotifications(todosState, financeState);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              
-              // Quantized SLM Model Status Card
-              const SlmModelCard(),
-              const SizedBox(height: 20),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(notifications.length),
+                  const SizedBox(height: 20),
 
-              // Database Seeder (Debug Mode Only)
-              if (kDebugMode)
-                SeedDatabaseButton(
-                  onSeedComplete: () {
-                    // Refresh all providers after seeding
-                    ref.refresh(coreActionNotifierProvider);
-                    ref.refresh(todosNotifierProvider);
-                  },
+                  AppSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search notes, tasks, or prompt history...',
+                    onChanged: (query) {
+                      setState(() {
+                        _searchQuery = query.trim().toLowerCase();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  actionsState.maybeWhen(
+                    data: (actions) {
+                      final pending = actions.where((a) => a.status == 'PENDING').toList();
+                      if (pending.isEmpty) return const SizedBox.shrink();
+                      return _buildPendingActions(context, ref, pending);
+                    },
+                    orElse: () => const SizedBox.shrink(),
+                  ),
+
+                  _buildSectionHeader('Upcoming Tasks', 'View all', () {
+                    ref.read(navIndexProvider.notifier).state = 1;
+                  }),
+                  const SizedBox(height: 14),
+                  _buildUpcomingTasks(ref),
+
+                  const SizedBox(height: 28),
+                  
+                  _buildSectionHeader('Recent Notes', 'View all', () {
+                    ref.read(navIndexProvider.notifier).state = 3;
+                  }),
+                  const SizedBox(height: 14),
+                  _buildRecentNotes(ref),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+            if (_showNotifications)
+              Positioned(
+                top: 64,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => setState(() => _showNotifications = false),
+                  child: const SizedBox.expand(),
                 ),
-              if (kDebugMode) const SizedBox(height: 20),
-
-              AppSearchBar(
-                controller: _searchController,
-                hintText: 'Search notes, tasks, or prompt history...',
-                onChanged: (query) {
-                  setState(() {
-                    _searchQuery = query.trim().toLowerCase();
-                  });
-                },
               ),
-              const SizedBox(height: 24),
-
-              actionsState.maybeWhen(
-                data: (actions) {
-                  final pending = actions.where((a) => a.status == 'PENDING').toList();
-                  if (pending.isEmpty) return const SizedBox.shrink();
-                  return _buildPendingActions(context, ref, pending);
-                },
-                orElse: () => const SizedBox.shrink(),
+            if (_showNotifications)
+              Positioned(
+                top: 64,
+                right: 20,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: _buildNotificationPanel(notifications),
+                ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              _buildSectionHeader('Upcoming Tasks', 'View all', () {
-                ref.read(navIndexProvider.notifier).state = 1;
-              }),
-              const SizedBox(height: 14),
-              _buildUpcomingTasks(ref),
+  List<_DashboardNotification> _buildNotifications(
+    AsyncValue<List<AdminTask>> todosState,
+    AsyncValue<FinanceState> financeState,
+  ) {
+    final notifications = <_DashboardNotification>[];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tasks = todosState.value ?? const <AdminTask>[];
 
-              const SizedBox(height: 28),
-              
-              _buildSectionHeader('Recent Notes', 'View all', () {
-                ref.read(navIndexProvider.notifier).state = 3;
-              }),
-              const SizedBox(height: 14),
-              _buildRecentNotes(ref),
-              const SizedBox(height: 32),
+    for (final task in tasks.where((task) => task.completionStatus == 0)) {
+      final dueDate = DateTime.tryParse(task.dueDate ?? '');
+      if (dueDate == null) continue;
+
+      final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
+      final daysUntilDue = dueDay.difference(today).inDays;
+
+      if (daysUntilDue < 0) {
+        notifications.add(_DashboardNotification(
+          icon: Icons.priority_high_rounded,
+          title: 'Deadline overdue',
+          message: task.title,
+          detail: _formatDueDetail(dueDate),
+          color: Colors.redAccent,
+        ));
+      } else if (daysUntilDue <= 5) {
+        notifications.add(_DashboardNotification(
+          icon: Icons.event_available_rounded,
+          title: daysUntilDue == 0 ? 'Due today' : 'Due in $daysUntilDue day${daysUntilDue == 1 ? '' : 's'}',
+          message: task.title,
+          detail: _formatDueDetail(dueDate),
+          color: const Color(0xFF6B4FA0),
+        ));
+      }
+    }
+
+    final finance = financeState.value;
+    if (finance != null && finance.totalBalance < _lowBudgetThreshold) {
+      notifications.add(_DashboardNotification(
+        icon: Icons.account_balance_wallet_outlined,
+        title: finance.totalBalance <= 0 ? 'Budget depleted' : 'Low budget',
+        message: 'Current balance is PHP ${finance.totalBalance.toStringAsFixed(2)}',
+        detail: 'Keep at least PHP ${_lowBudgetThreshold.toStringAsFixed(0)} available',
+        color: Colors.deepOrange,
+      ));
+    }
+
+    return notifications.take(6).toList();
+  }
+
+  String _formatDueDetail(DateTime dueDate) {
+    final hour = dueDate.hour.toString().padLeft(2, '0');
+    final minute = dueDate.minute.toString().padLeft(2, '0');
+    return '${dueDate.month}/${dueDate.day}/${dueDate.year} at $hour:$minute';
+  }
+
+  Widget _buildNotificationPanel(List<_DashboardNotification> notifications) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 360,
+        height: 320,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF6B4FA0).withValues(alpha: 0.14)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+                color: const Color(0xFFF3E5F5).withValues(alpha: 0.65),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6B4FA0).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF6B4FA0), size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Notifications',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
+                      ),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => setState(() => _showNotifications = false),
+                    ),
+                  ],
+                ),
+              ),
+              if (notifications.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(22),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.task_alt_rounded, color: Colors.green, size: 30),
+                          SizedBox(height: 8),
+                          Text('Nothing needs attention', style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(height: 4),
+                          Text(
+                            'No near dues, deadlines, or budget alerts.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    itemCount: notifications.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.withValues(alpha: 0.12), indent: 58),
+                    itemBuilder: (context, index) {
+                      final item = notifications[index];
+                      return ListTile(
+                        dense: true,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: item.color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(item.icon, color: item.color, size: 20),
+                        ),
+                        title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.message, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            Text(item.detail, style: TextStyle(color: item.color, fontSize: 11, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -108,7 +289,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(int notificationCount) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -154,19 +335,31 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded, size: 26),
-                  onPressed: () {},
+                  onPressed: () {
+                    setState(() {
+                      _showNotifications = !_showNotifications;
+                    });
+                  },
                 ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
+                if (notificationCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
-                  ),
-                )
+                  )
               ],
             ),
           ],
@@ -741,4 +934,20 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       },
     );
   }
+}
+
+class _DashboardNotification {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String detail;
+  final Color color;
+
+  const _DashboardNotification({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.detail,
+    required this.color,
+  });
 }

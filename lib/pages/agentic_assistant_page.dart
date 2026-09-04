@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/custom_card.dart';
-import '../features/ai_orchestrator/presentation/widgets/slm_model_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 
 class AgenticAssistantPage extends ConsumerStatefulWidget {
@@ -60,10 +59,6 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
       ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: SlmModelCard(),
-          ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,

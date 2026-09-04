@@ -25,7 +25,6 @@ class MainLayout extends ConsumerWidget {
     ];
 
     return Scaffold(
-      extendBody: true,
       body: IndexedStack(
         index: currentIndex,
         children: pages,
@@ -46,55 +45,37 @@ class MainLayout extends ConsumerWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // Floating Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            )
-          ],
-        ),
-        child: BottomAppBar(
-          padding: EdgeInsets.zero,
-          color: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          clipBehavior: Clip.antiAlias,
-          shape: const AutomaticNotchedShape(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(30)),
-            ),
-          ),
-          notchMargin: 12,
-          child: SizedBox(
-            height: 65,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildNavItem(context, ref, Icons.home_rounded, 'Home', 0, currentIndex),
-                ),
-                Expanded(
-                  child: _buildNavItem(context, ref, Icons.check_circle_outline_rounded, "To-do's", 1, currentIndex),
-                ),
-                
-                // Space for FAB
-                const SizedBox(width: 40), 
-                
-                Expanded(
-                  child: _buildNavItem(context, ref, Icons.account_balance_wallet_rounded, 'Money', 2, currentIndex),
-                ),
-                Expanded(
-                  child: _buildNavItem(context, ref, Icons.person_outline_rounded, 'Profile', 3, currentIndex),
-                ),
-              ],
-            )
+      // Docked Bottom Navigation Bar
+      bottomNavigationBar: BottomAppBar(
+        padding: EdgeInsets.zero,
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 12,
+        child: SizedBox(
+          height: 65,
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildNavItem(context, ref, Icons.home_rounded, 'Home', 0, currentIndex),
+              ),
+              Expanded(
+                child: _buildNavItem(context, ref, Icons.check_circle_outline_rounded, "To-do's", 1, currentIndex),
+              ),
+
+              // Space for FAB
+              const SizedBox(width: 40),
+
+              Expanded(
+                child: _buildNavItem(context, ref, Icons.account_balance_wallet_rounded, 'Money', 2, currentIndex),
+              ),
+              Expanded(
+                child: _buildNavItem(context, ref, Icons.person_outline_rounded, 'Profile', 3, currentIndex),
+              ),
+            ],
           )
-        ),
+        )
       )
     );
   }
