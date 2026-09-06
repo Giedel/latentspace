@@ -174,6 +174,32 @@ class ProfilePage extends ConsumerWidget {
 
             CustomCard(
               margin: const EdgeInsets.only(bottom: 12),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Google connection will be available soon.')),
+                );
+              },
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _softPurple.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.account_circle_rounded, color: _primaryColor),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text('Connect to Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
+            ),
+
+            CustomCard(
+              margin: const EdgeInsets.only(bottom: 12),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const TrashPage()),

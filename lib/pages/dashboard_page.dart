@@ -20,6 +20,8 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
+  static const String _userFirstName = 'Giedel';
+
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -31,9 +33,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning, Giedel! 👋';
-    if (hour < 17) return 'Good afternoon, Giedel! ☀️';
-    return 'Good evening, Giedel! 🌙';
+    if (hour < 12) return 'Good morning, $_userFirstName';
+    if (hour < 18) return 'Good afternoon, $_userFirstName';
+    return 'Good evening, $_userFirstName';
   }
 
   @override
@@ -121,10 +123,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 Text(
                   _getGreeting(),
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  'On-device SLM Personal Administrator',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
