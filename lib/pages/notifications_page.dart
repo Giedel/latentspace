@@ -132,6 +132,26 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: allNotifications.isEmpty || allNotifications.every((item) => readIds.contains(item.id))
+                ? null
+                : () {
+                    ref.read(notificationReadIdsProvider.notifier).state = {
+                      ...readIds,
+                      ...allNotifications.map((item) => item.id),
+                    };
+                  },
+            icon: const Icon(Icons.done_all_rounded, size: 18),
+            label: const Text('Mark all read'),
+            style: TextButton.styleFrom(
+              foregroundColor: _primaryColor,
+              disabledForegroundColor: Colors.grey.withValues(alpha: 0.5),
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: Column(
         children: [
@@ -238,21 +258,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      if (!isRead)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(color: _primaryColor, shape: BoxShape.circle),
-                        ),
-                    ],
+                  Text(
+                    notification.title,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(

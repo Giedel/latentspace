@@ -4,6 +4,7 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/category_chip.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
+import '../core/widgets/app_feedback.dart';
 import '../core/widgets/stat_summary_card.dart';
 import '../features/finance_ledger/providers/finance_provider.dart';
 
@@ -175,28 +176,13 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         ),
                         title: Text(log.primaryCategory, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                         subtitle: Text('${isExpense ? "Expense" : "Income"} • ${_formatDate(log.transactionDate)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${isExpense ? '-' : '+'} ${log.currency} $amount',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: directionColor,
-                                fontSize: 15,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 18),
-                              onPressed: () {
-                                ref.read(financeRepositoryProvider).deleteTransactionByActionId(log.actionId);
-                                ref.refresh(financeNotifierProvider);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Transaction deleted')),
-                                );
-                              },
-                            )
-                          ],
+                        trailing: Text(
+                          '${isExpense ? '-' : '+'} ${log.currency} $amount',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: directionColor,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     );
@@ -295,9 +281,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                       ref.refresh(financeNotifierProvider);
                       if (context.mounted) {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Transaction saved!'), backgroundColor: Colors.green),
-                        );
+                        AppFeedback.show(context, message: 'Transaction saved!');
                       }
                     }
                   },

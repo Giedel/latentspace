@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/category_chip.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
+import '../core/widgets/app_feedback.dart';
 import '../features/user_tasks/providers/task_provider.dart';
 import '../features/user_tasks/models/admin_task.dart';
 
@@ -45,104 +46,35 @@ class _TodosPageState extends ConsumerState<TodosPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
+      body: todosState.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (tasks) {
+          var filtered = tasks;
+          if (_filterStatus == 'Pending') {
+            filtered = filtered.where((task) => task.completionStatus == 0).toList();
+          } else if (_filterStatus == 'Completed') {
+            filtered = filtered.where((task) => task.completionStatus == 1).toList();
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
             children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: _topControlsMaxHeight(constraints.maxHeight)),
-                child: Container(
-                  color: Colors.white,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Column(
-                      children: [
-                        _buildTaskCalendar(todosState.value ?? const <AdminTask>[]),
-                        const SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              CategoryChip(
-                                label: 'All',
-                                isSelected: _filterStatus == 'All',
-                                onTap: () => setState(() => _filterStatus = 'All'),
-                                icon: Icons.list_alt_rounded,
-                              ),
-                              CategoryChip(
-                                label: 'Pending',
-                                isSelected: _filterStatus == 'Pending',
-                                onTap: () => setState(() => _filterStatus = 'Pending'),
-                                icon: Icons.pending_actions_rounded,
-                              ),
-                              CategoryChip(
-                                label: 'Completed',
-                                isSelected: _filterStatus == 'Completed',
-                                onTap: () => setState(() => _filterStatus = 'Completed'),
-                                icon: Icons.check_circle_rounded,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+              _buildTaskCalendar(tasks),
+              const SizedBox(height: 12),
+              _buildFilterButtons(),
+              const SizedBox(height: 12),
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 80),
+                  child: EmptyStateWidget(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: _filterStatus == 'Completed' ? 'No completed tasks' : 'All caught up!',
+                    message: 'No tasks match the selected filter.',
                   ),
-                ),
-              ),
-              Expanded(
-                child: todosState.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => Center(child: Text('Error: $err')),
-                  data: (tasks) {
-                    final selectedDay = _dateOnly(_selectedDate);
-                    var filtered = tasks;
-
-                    if (_filterStatus == 'Pending') {
-                      filtered = filtered.where((t) => t.completionStatus == 0).toList();
-                    } else if (_filterStatus == 'Completed') {
-                      filtered = filtered.where((t) => t.completionStatus == 1).toList();
-                    }
-
-                    filtered = filtered.where(_isTaskDueOnSelectedDate).toList();
-
-                    if (filtered.isEmpty) {
-                      return LayoutBuilder(
-                        builder: (context, constraints) {
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.only(bottom: 100),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                              child: EmptyStateWidget(
-                                icon: Icons.check_circle_outline_rounded,
-                                title: _filterStatus == 'Completed' ? 'No completed tasks' : 'All caught up!',
-                                message: 'No tasks match the selected calendar date.',
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }
-
-                    return ReorderableListView.builder(
-                      key: ValueKey('tasks-${_filterStatus}-${selectedDay.toIso8601String()}'),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16).copyWith(bottom: 100),
-                      itemCount: filtered.length,
-                      onReorderItem: (oldIndex, newIndex) {
-                        ref.read(todosNotifierProvider.notifier).reorderTasks(oldIndex, newIndex);
-                      },
-                      itemBuilder: (context, index) {
-                        final task = filtered[index];
-                        return _buildInteractiveTaskTile(
-                          context,
-                          ref,
-                          task,
-                          ValueKey('${selectedDay.toIso8601String()}-${task.actionId}'),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
+                )
+              else
+                ..._buildDateGroupedTaskItems(filtered),
             ],
           );
         },
@@ -150,12 +82,32 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     );
   }
 
-  double _topControlsMaxHeight(double availableHeight) {
-    if (!_isCalendarExpanded) return availableHeight;
-
-    final maxForControls = availableHeight - 96;
-    if (maxForControls < 240) return 240;
-    return maxForControls;
+  Widget _buildFilterButtons() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          CategoryChip(
+            label: 'All',
+            isSelected: _filterStatus == 'All',
+            onTap: () => setState(() => _filterStatus = 'All'),
+            icon: Icons.list_alt_rounded,
+          ),
+          CategoryChip(
+            label: 'Pending',
+            isSelected: _filterStatus == 'Pending',
+            onTap: () => setState(() => _filterStatus = 'Pending'),
+            icon: Icons.pending_actions_rounded,
+          ),
+          CategoryChip(
+            label: 'Completed',
+            isSelected: _filterStatus == 'Completed',
+            onTap: () => setState(() => _filterStatus = 'Completed'),
+            icon: Icons.check_circle_rounded,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInteractiveTaskTile(BuildContext context, WidgetRef ref, AdminTask task, Key key) {
@@ -176,7 +128,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       ),
       onDismissed: (_) {
         ref.read(todosNotifierProvider.notifier).deleteTask(task);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task deleted')));
+        AppFeedback.show(context, message: 'Task deleted', icon: Icons.delete_outline_rounded);
       },
       child: CustomCard(
         margin: const EdgeInsets.only(bottom: 12),
@@ -207,6 +159,61 @@ class _TodosPageState extends ConsumerState<TodosPage> {
             onPressed: () => _showEditDialog(context, ref, task),
           ),
         ),
+      ),
+    );
+  }
+
+  /// A single continuous feed, grouped chronologically by due date. Calendar
+  /// date selection remains available for navigation but does not hide tasks.
+  List<Widget> _buildDateGroupedTaskItems(List<AdminTask> tasks) {
+    final sortedTasks = List<AdminTask>.from(tasks)
+      ..sort((a, b) {
+        final first = DateTime.tryParse(a.dueDate ?? '');
+        final second = DateTime.tryParse(b.dueDate ?? '');
+        if (first == null && second == null) return a.title.compareTo(b.title);
+        if (first == null) return 1;
+        if (second == null) return -1;
+        return first.compareTo(second);
+      });
+
+    final children = <Widget>[];
+    DateTime? previousDate;
+    var hasNoDueDateHeader = false;
+
+    for (final task in sortedTasks) {
+      final dueDate = DateTime.tryParse(task.dueDate ?? '');
+      if (dueDate == null) {
+        if (!hasNoDueDateHeader) {
+          children.add(_buildTaskDateHeader(null));
+          hasNoDueDateHeader = true;
+        }
+      } else {
+        final date = _dateOnly(dueDate);
+        if (previousDate == null || !_isSameDay(previousDate, date)) {
+          children.add(_buildTaskDateHeader(date));
+          previousDate = date;
+        }
+      }
+      children.add(_buildInteractiveTaskTile(context, ref, task, ValueKey('task-${task.actionId}')));
+    }
+
+    return children;
+  }
+
+  Widget _buildTaskDateHeader(DateTime? date) {
+    final label = date == null ? 'No due date' : '${_weekdayName(date)}, ${_formatLongDate(date)}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 22,
+            decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 9),
+          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _primaryColor)),
+        ],
       ),
     );
   }
@@ -844,6 +851,24 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     return '${months[date.month - 1]} ${date.year}';
   }
 
+  String _formatLongDate(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
   String _weekdayName(DateTime date) {
     const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return names[date.weekday - 1];
@@ -897,9 +922,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                 if (title.isNotEmpty) {
                   ref.read(todosNotifierProvider.notifier).addTask(title);
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task added successfully!'), backgroundColor: Colors.green),
-                  );
+                  AppFeedback.show(context, message: 'Task added successfully!');
                 }
               },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
@@ -916,6 +939,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -953,26 +977,21 @@ class _TodosPageState extends ConsumerState<TodosPage> {
             FilledButton.icon(
               onPressed: () async {
                 Navigator.pop(context);
-                final messenger = ScaffoldMessenger.of(this.context);
-                messenger.showSnackBar(const SnackBar(content: Text('Connecting to Google Calendar...')));
+                AppFeedback.show(this.context, message: 'Connecting to Google Calendar...', icon: Icons.sync_rounded);
                 try {
                   final result = await ref.read(todosNotifierProvider.notifier).syncGoogleCalendar();
                   if (!mounted) return;
-                  messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(SnackBar(
-                    content: Text(result == null
+                  AppFeedback.show(
+                    this.context,
+                    message: result == null
                         ? 'Google Calendar sign-in was cancelled.'
                         : 'Calendar synced. ${result.received} found, ${result.imported} new imported.'
-                            '${result.warnings.isEmpty ? '' : ' ${result.warnings.first}'}'),
-                    backgroundColor: _primaryColor,
-                  ));
+                            '${result.warnings.isEmpty ? '' : ' ${result.warnings.first}'}',
+                    icon: Icons.sync_rounded,
+                  );
                 } catch (error) {
                   if (!mounted) return;
-                  messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(SnackBar(
-                    content: Text('Google Calendar sync failed: $error'),
-                    backgroundColor: Colors.redAccent,
-                  ));
+                  AppFeedback.show(this.context, message: 'Google Calendar sync failed: $error', icon: Icons.error_outline_rounded);
                 }
               },
               icon: const Icon(Icons.sync_rounded, size: 18),
@@ -1000,10 +1019,13 @@ class _TodosPageState extends ConsumerState<TodosPage> {
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Edit Task'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Task title'),
+          content: SizedBox(
+            width: 440,
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Task title'),
+            ),
           ),
           actions: [
             TextButton(

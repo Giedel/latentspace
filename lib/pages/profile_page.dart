@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/custom_card.dart';
+import '../core/widgets/app_feedback.dart';
 import '../core/widgets/stat_summary_card.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/finance_ledger/providers/finance_provider.dart';
@@ -175,9 +176,7 @@ class ProfilePage extends ConsumerWidget {
             CustomCard(
               margin: const EdgeInsets.only(bottom: 12),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Google connection will be available soon.')),
-                );
+                AppFeedback.show(context, message: 'Google connection will be available soon.', icon: Icons.info_outline_rounded);
               },
               child: Row(
                 children: [
@@ -209,10 +208,10 @@ class ProfilePage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _dangerColor.withValues(alpha: 0.08),
+                      color: _softPurple.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.delete_outline_rounded, color: _dangerColor),
+                    child: const Icon(Icons.delete_outline_rounded, color: _primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -226,9 +225,7 @@ class ProfilePage extends ConsumerWidget {
             CustomCard(
               margin: const EdgeInsets.only(bottom: 12),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('LatentSpace v1.0.0 (On-Device Gemma 2B SLM Middleware + SQLite)')),
-                );
+                AppFeedback.show(context, message: 'LatentSpace v1.0.0 (On-Device Gemma 2B SLM Middleware + SQLite)', icon: Icons.info_outline_rounded);
               },
               child: Row(
                 children: [

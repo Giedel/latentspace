@@ -7,9 +7,11 @@ import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 import '../features/finance_ledger/providers/finance_provider.dart';
 import '../features/user_tasks/providers/task_provider.dart';
+import '../features/user_tasks/models/admin_task.dart';
 import 'agentic_assistant_page.dart';
 import 'main_layout.dart';
 import 'notifications_page.dart';
+import '../core/widgets/app_feedback.dart';
 
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -159,7 +161,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: const BoxDecoration(
-                        color: Colors.redAccent,
+                        color: Color(0xFF6B4FA0),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -213,10 +215,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
             ),
             TextButton(
-              onPressed: () {
-                for (var action in pendingActions) {
-                  ref.read(coreActionNotifierProvider.notifier).updateAction(
+              onPressed: () async {
+                for (final action in pendingActions) {
+                  await ref.read(coreActionNotifierProvider.notifier).updateAction(
                     action.copyWith(status: 'REJECTED'),
+                  );
+                }
+                if (context.mounted) {
+                  AppFeedback.show(
+                    context,
+                    icon: Icons.delete_outline_rounded,
+                    message: '${pendingActions.length} review item${pendingActions.length == 1 ? '' : 's'} discarded',
                   );
                 }
               },
@@ -227,16 +236,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         const SizedBox(height: 8),
         ...pendingActions.map((action) => CustomCard(
           margin: const EdgeInsets.only(bottom: 10),
-          backgroundColor: const Color(0xFFFFF4E5),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          backgroundColor: Colors.white,
+          border: Border.all(color: Colors.white, width: 1.2),
+          elevation: 0.8,
           onTap: () => _showEditableReviewDialog(context, ref, action),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.deepOrange),
                 ),
                 child: const Icon(Icons.psychology_rounded, color: Colors.deepOrange, size: 20),
               ),
@@ -289,6 +300,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               backgroundColor: Colors.white,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -304,8 +316,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   Text('Review $domain', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
-              content: SingleChildScrollView(
-                child: Column(
+              content: SizedBox(
+                width: 440,
+                child: SingleChildScrollView(
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -339,38 +353,49 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(
                           labelText: 'Amount (PHP)',
-                          prefixIcon: Icon(Icons.attach_money_rounded),
+                          prefixText: '₱ ',
+                          prefixStyle: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: ['EXPENSE', 'INCOME'].contains(selectedType) ? selectedType : 'EXPENSE',
-                        decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: 'EXPENSE', child: Text('Expense')),
-                          DropdownMenuItem(value: 'INCOME', child: Text('Income')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedType = val);
-                        },
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 200),
+                        child: DropdownButtonFormField<String>(
+                          value: ['EXPENSE', 'INCOME'].contains(selectedType) ? selectedType : 'EXPENSE',
+                          isDense: true,
+                          menuMaxHeight: 220,
+                          decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 'EXPENSE', child: Text('Expense')),
+                            DropdownMenuItem(value: 'INCOME', child: Text('Income')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setModalState(() => selectedType = val);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: ['Food & Beverage', 'Groceries', 'Transportation', 'Utilities', 'Shopping', 'Income', 'General'].contains(selectedCategory) ? selectedCategory : 'General',
-                        decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: 'Food & Beverage', child: Text('Food & Beverage')),
-                          DropdownMenuItem(value: 'Groceries', child: Text('Groceries')),
-                          DropdownMenuItem(value: 'Transportation', child: Text('Transportation')),
-                          DropdownMenuItem(value: 'Utilities', child: Text('Utilities')),
-                          DropdownMenuItem(value: 'Shopping', child: Text('Shopping')),
-                          DropdownMenuItem(value: 'Income', child: Text('Income')),
-                          DropdownMenuItem(value: 'General', child: Text('General')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedCategory = val);
-                        },
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 200),
+                        child: DropdownButtonFormField<String>(
+                          value: ['Food & Beverage', 'Groceries', 'Transportation', 'Utilities', 'Shopping', 'Income', 'General'].contains(selectedCategory) ? selectedCategory : 'General',
+                          isDense: true,
+                          menuMaxHeight: 260,
+                          decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 'Food & Beverage', child: Text('Food & Beverage')),
+                            DropdownMenuItem(value: 'Groceries', child: Text('Groceries')),
+                            DropdownMenuItem(value: 'Transportation', child: Text('Transportation')),
+                            DropdownMenuItem(value: 'Utilities', child: Text('Utilities')),
+                            DropdownMenuItem(value: 'Shopping', child: Text('Shopping')),
+                            DropdownMenuItem(value: 'Income', child: Text('Income')),
+                            DropdownMenuItem(value: 'General', child: Text('General')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setModalState(() => selectedCategory = val);
+                          },
+                        ),
                       ),
                     ] else if (domain == 'TO-DO' || domain == 'REMINDER') ...[
                       TextField(
@@ -393,15 +418,43 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ]
                   ],
                 ),
+                ),
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    final rejected = action.copyWith(status: 'REJECTED');
-                    ref.read(coreActionNotifierProvider.notifier).updateAction(rejected);
-                    Navigator.pop(context);
+                    showDialog(
+                      context: context,
+                      builder: (confirmContext) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        surfaceTintColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        title: const Text('Discard this item?', style: TextStyle(fontWeight: FontWeight.bold)),
+                        content: const Text('This will move the item to the rejected state. You can still recover it from the trash/history if needed.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(confirmContext),
+                            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              final rejected = action.copyWith(status: 'REJECTED');
+                              ref.read(coreActionNotifierProvider.notifier).updateAction(rejected);
+                              Navigator.pop(confirmContext); // Close confirmation
+                              Navigator.pop(context); // Close review dialog
+                              AppFeedback.show(
+                                context,
+                                icon: Icons.delete_outline_rounded,
+                                message: 'Review item discarded',
+                              );
+                            },
+                            child: const Text('Discard', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
                   },
-                  child: const Text('Discard', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                  child: const Text('Discard', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                 ),
                 FilledButton(
                   onPressed: () async {
@@ -423,14 +476,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
                     if (context.mounted) {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('$domain approved & saved!'),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                      AppFeedback.show(context, message: '$domain approved & saved!');
                     }
                   },
                   style: FilledButton.styleFrom(
@@ -492,13 +538,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 children: [
                   ListTile(
                     onTap: () {
-                      ref.read(todosNotifierProvider.notifier).toggleCompletion(task);
+                      _toggleTaskWithFeedback(ref, task);
                     },
                     leading: Checkbox(
                       value: task.completionStatus == 1,
                       activeColor: const Color(0xFF6B4FA0),
                       onChanged: (_) {
-                        ref.read(todosNotifierProvider.notifier).toggleCompletion(task);
+                        _toggleTaskWithFeedback(ref, task);
                       },
                     ),
                     title: Text(
@@ -529,6 +575,24 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _toggleTaskWithFeedback(WidgetRef ref, AdminTask task) async {
+    final isDone = task.completionStatus == 0;
+    await ref.read(todosNotifierProvider.notifier).toggleCompletion(task);
+
+    if (!mounted) return;
+    AppFeedback.show(
+      context,
+      message: isDone ? 'Task marked as done' : 'Task marked as pending',
+      icon: isDone ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
+      actionLabel: 'Undo',
+      duration: const Duration(seconds: 5),
+      onAction: () async {
+        await ref.read(todosNotifierProvider.notifier).setCompletionStatus(task, task.completionStatus);
+        ref.invalidate(upcomingTasksProvider);
+      },
     );
   }
 
@@ -593,9 +657,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                               if (val == 'trash') {
                                 final trashed = note.copyWith(status: 'FAILED');
                                 ref.read(coreActionNotifierProvider.notifier).updateAction(trashed);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Note moved to Trash')),
-                                );
+                                AppFeedback.show(context, message: 'Note moved to Trash', icon: Icons.delete_outline_rounded);
                               }
                             },
                             itemBuilder: (context) => [
@@ -654,10 +716,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       context: context,
       builder: (context) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
           backgroundColor: Colors.transparent,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
+            constraints: const BoxConstraints(maxWidth: 520, maxHeight: 520),
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(28),
@@ -695,9 +757,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ref.read(coreActionNotifierProvider.notifier).updateAction(updatedNote);
 
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Note updated!'), backgroundColor: Colors.green),
-                        );
+                        AppFeedback.show(context, message: 'Note updated!');
                       },
                       icon: const Icon(Icons.check_rounded, size: 18),
                       label: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),

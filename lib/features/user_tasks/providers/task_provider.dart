@@ -218,6 +218,33 @@ class TodosNotifier extends AsyncNotifier<List<AdminTask>> {
     }).toList());
 
     await ref.read(taskRepositoryProvider).updateTaskStatus(task.taskId!, newStatus);
+    ref.invalidate(upcomingTasksProvider);
+    ref.read(coreActionNotifierProvider.notifier).loadActions();
+  }
+
+  /// Sets a known completion state. This is used by Undo so it restores the
+  /// original value rather than toggling from a stale task snapshot.
+  Future<void> setCompletionStatus(AdminTask task, int completionStatus) async {
+    if (task.taskId == null) return;
+
+    final currentList = state.value ?? [];
+    state = AsyncValue.data(currentList.map((item) {
+      if (item.taskId == task.taskId) {
+        return AdminTask(
+          taskId: item.taskId,
+          actionId: item.actionId,
+          title: item.title,
+          description: item.description,
+          dueDate: item.dueDate,
+          isRecurring: item.isRecurring,
+          completionStatus: completionStatus,
+        );
+      }
+      return item;
+    }).toList());
+
+    await ref.read(taskRepositoryProvider).updateTaskStatus(task.taskId!, completionStatus);
+    ref.invalidate(upcomingTasksProvider);
     ref.read(coreActionNotifierProvider.notifier).loadActions();
   }
 

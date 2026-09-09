@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_recognition_result.dart' as stt_result;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../../ai_orchestrator/providers/core_action_provider.dart';
 
 class MultimodalInputSheet extends ConsumerStatefulWidget {
@@ -81,24 +82,18 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
             onError: (error) {
               if (!mounted) return;
               setState(() => _isListening = false);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Speech recognition error: ${error.errorMsg}')),
-              );
+              AppFeedback.show(context, message: 'Speech recognition error: ${error.errorMsg}', icon: Icons.error_outline_rounded);
             },
           );
     } on MissingPluginException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Restart and rebuild the app to enable speech recognition.')),
-      );
+      AppFeedback.show(context, message: 'Restart and rebuild the app to enable speech recognition.', icon: Icons.info_outline_rounded);
       return;
     }
 
     if (!_speechAvailable) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Speech recognition is not available on this device.')),
-      );
+      AppFeedback.show(context, message: 'Speech recognition is not available on this device.', icon: Icons.info_outline_rounded);
       return;
     }
 
@@ -132,9 +127,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
       if (!mounted) return;
       setState(() => _isListening = false);
       _voiceTimer?.cancel();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Restart and rebuild the app to enable speech recognition.')),
-      );
+      AppFeedback.show(context, message: 'Restart and rebuild the app to enable speech recognition.', icon: Icons.info_outline_rounded);
     }
   }
 
@@ -240,9 +233,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
     final bytes = await image.readAsBytes();
     if (bytes.length > _maxImageBytes) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image must be 25 MB or smaller.')),
-      );
+      AppFeedback.show(context, message: 'Image must be 25 MB or smaller.', icon: Icons.error_outline_rounded);
       return;
     }
 
@@ -297,9 +288,17 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = bottomInset > 0;
 
     return Container(
-      margin: EdgeInsets.only(bottom: bottomInset, left: 16, right: 16, top: 16),
+      // Raise the sheet above the docked navigation without changing its
+      // content-driven height. Avoid the extra offset while typing.
+      margin: EdgeInsets.only(
+        bottom: bottomInset + (isKeyboardVisible ? 0 : 80),
+        left: 16,
+        right: 16,
+        top: 16,
+      ),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -321,7 +320,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
             children: [
               const Text(
                 'What do you need to remember?',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
               ),
               IconButton(
                 icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),

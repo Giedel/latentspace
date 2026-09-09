@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
+import '../core/widgets/app_feedback.dart';
+import '../core/theme/app_theme.dart';
 import '../features/ai_orchestrator/providers/core_action_provider.dart';
 import '../features/ai_orchestrator/models/core_ai_action.dart';
 
 class TrashPage extends ConsumerWidget {
   const TrashPage({super.key});
+
+  static const _themeColor = AppTheme.primaryColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +25,7 @@ class TrashPage extends ConsumerWidget {
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+            icon: const Icon(Icons.delete_forever_rounded, color: _themeColor),
             tooltip: 'Empty Trash',
             onPressed: () => _confirmEmptyTrash(context, ref),
           ),
@@ -55,21 +59,28 @@ class TrashPage extends ConsumerWidget {
   }
 
   Widget _buildTrashTile(BuildContext context, WidgetRef ref, CoreAiAction action) {
-    final bgColors = [const Color(0xFFF4F0FF), const Color(0xFFFFF9E6), const Color(0xFFEFFFF4)];
-    final iconColors = [Colors.deepPurple, Colors.orange, Colors.green];
-    final colorIndex = action.actionId.hashCode.abs() % bgColors.length;
-
     return CustomCard(
       margin: const EdgeInsets.only(bottom: 12),
-      backgroundColor: bgColors[colorIndex],
-      onTap: () => _showTrashedItemPreview(context, ref, action, bgColors[colorIndex], iconColors[colorIndex]),
+      // Match the scaffold surface so the shadow is visible only outside the
+      // white outline, rather than showing through the card interior.
+      backgroundColor: AppTheme.appBackgroundColor,
+      border: Border.all(color: Colors.white, width: 1.2),
+      elevation: 0.8,
+      onTap: () => _showTrashedItemPreview(context, ref, action),
       child: Row(
         children: [
-          Icon(
-            action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
-                : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
-                : Icons.check_circle_outline_rounded,
-            color: iconColors[colorIndex],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
+                  : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
+                  : Icons.check_circle_outline_rounded,
+              color: _themeColor,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -101,7 +112,20 @@ class TrashPage extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Empty Trash?'),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: const BorderSide(color: Colors.white, width: 1.2),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.delete_forever_rounded, color: _themeColor),
+              SizedBox(width: 10),
+              Text('Empty Trash?'),
+            ],
+          ),
           content: const Text('All items in the trash bin will be permanently deleted. This action cannot be undone.'),
           actions: [
             TextButton(
@@ -112,9 +136,7 @@ class TrashPage extends ConsumerWidget {
               onPressed: () {
                 ref.read(coreActionNotifierProvider.notifier).emptyTrash();
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Trash bin emptied'), backgroundColor: Colors.redAccent),
-                );
+                AppFeedback.show(context, message: 'Trash bin emptied', icon: Icons.delete_outline_rounded);
               },
               style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
               child: const Text('Empty Trash'),
@@ -129,8 +151,6 @@ class TrashPage extends ConsumerWidget {
       BuildContext context,
       WidgetRef ref,
       CoreAiAction action,
-      Color bgColor,
-      Color iconColor
   ) {
     showDialog(
       context: context,
@@ -141,8 +161,16 @@ class TrashPage extends ConsumerWidget {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400, maxHeight: 420),
             decoration: BoxDecoration(
-              color: bgColor,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.10),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -151,7 +179,7 @@ class TrashPage extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_delete_rounded, color: iconColor),
+                      const Icon(Icons.auto_delete_rounded, color: _themeColor),
                       const SizedBox(width: 8),
                       const Text(
                         'Trashed Item Preview',
@@ -164,8 +192,9 @@ class TrashPage extends ConsumerWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white),
                     ),
                     child: Text(
                       '"${action.rawUserInput}"',
@@ -189,24 +218,22 @@ class TrashPage extends ConsumerWidget {
                         onPressed: () {
                           ref.read(coreActionNotifierProvider.notifier).deleteActionPermanently(action.actionId);
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Item deleted permanently')),
-                          );
+                          AppFeedback.show(context, message: 'Item deleted permanently', icon: Icons.delete_forever_rounded);
                         },
-                        icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 18),
-                        label: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                        icon: const Icon(Icons.delete_forever_rounded, color: _themeColor, size: 18),
+                        label: const Text('Delete', style: TextStyle(color: _themeColor)),
                       ),
                       FilledButton.icon(
-                        onPressed: () {
-                          final restored = action.copyWith(status: 'COMPLETED');
-                          ref.read(coreActionNotifierProvider.notifier).updateAction(restored);
-
+                        onPressed: () async {
+                          await ref.read(coreActionNotifierProvider.notifier).restoreFromTrash(action);
+                          if (!context.mounted) return;
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Item restored successfully!'),
-                              backgroundColor: Colors.green,
-                            ),
+                          AppFeedback.show(
+                            context,
+                            message: action.status == 'REJECTED'
+                                ? 'Item restored for review'
+                                : 'Item restored successfully!',
+                            icon: Icons.restore_rounded,
                           );
                         },
                         icon: const Icon(Icons.restore_rounded, size: 18),

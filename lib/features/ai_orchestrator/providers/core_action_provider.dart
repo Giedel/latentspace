@@ -82,6 +82,15 @@ class CoreActionNotifier extends StateNotifier<AsyncValue<List<CoreAiAction>>> {
     }
   }
 
+  /// Restores an item to the place it came from. Rejected items were awaiting
+  /// review and have no domain row yet, so they return to the review queue.
+  /// Failed items that were already visible content (such as a trashed note)
+  /// return to the completed/active state.
+  Future<void> restoreFromTrash(CoreAiAction action) async {
+    final restoredStatus = action.status == 'REJECTED' ? 'PENDING' : 'COMPLETED';
+    await updateAction(action.copyWith(status: restoredStatus));
+  }
+
   Future<void> submitRawPrompt(String prompt) async {
     final slm = ref.read(slmServiceProvider);
     await slm.processInput(prompt);
