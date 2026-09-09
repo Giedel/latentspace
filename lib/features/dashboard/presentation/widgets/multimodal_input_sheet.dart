@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:speech_to_text/speech_recognition_result.dart' as stt_result;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../../core/theme/app_theme.dart';
 import '../../../ai_orchestrator/providers/core_action_provider.dart';
@@ -164,7 +165,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
     });
   }
 
-  void _setRecognizedSpeechText(stt.SpeechRecognitionResult result) {
+  void _setRecognizedSpeechText(stt_result.SpeechRecognitionResult result) {
     final recognizedWords = result.recognizedWords.trim();
     if (recognizedWords.isEmpty) return;
 

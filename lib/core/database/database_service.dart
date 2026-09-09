@@ -34,9 +34,10 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -135,6 +136,26 @@ class DatabaseService {
       CREATE INDEX idx_pending_actions 
       ON core_ai_actions(action_id) 
       WHERE status = 'PENDING';
+    ''');
+
+    await _createGoogleCalendarEventTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createGoogleCalendarEventTable(db);
+    }
+  }
+
+  Future<void> _createGoogleCalendarEventTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE google_calendar_events (
+        event_id TEXT PRIMARY KEY,
+        action_id TEXT NOT NULL UNIQUE,
+        account_email TEXT NOT NULL,
+        updated_at TEXT,
+        FOREIGN KEY (action_id) REFERENCES core_ai_actions(action_id) ON DELETE CASCADE
+      );
     ''');
   }
 }

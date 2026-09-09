@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/database_service.dart';
 import '../../ai_orchestrator/models/core_ai_action.dart';
 import '../../ai_orchestrator/providers/core_action_provider.dart';
+import '../../calendar/services/google_calendar_service.dart';
 import '../models/admin_task.dart';
 
 class TaskRepository {
@@ -89,6 +90,90 @@ class TaskRepository {
     // 'ON DELETE CASCADE' schema rule automatically deletes task from domain_admin_tasks
     await db.delete('core_ai_actions', where: 'action_id = ?', whereArgs: [actionId]);
   }
+
+  /// Inserts calendar events once and refreshes their title/date on later syncs.
+  /// User completion state is deliberately preserved when Google changes an event.
+  Future<int> upsertGoogleCalendarEvents(GoogleCalendarSyncData syncData) async {
+    final db = await _dbService.database;
+    var imported = 0;
+
+    await db.transaction((txn) async {
+      for (final event in syncData.events) {
+        final existing = await txn.query(
+          'google_calendar_events',
+          columns: const ['action_id'],
+          where: 'event_id = ?',
+          whereArgs: [event.id],
+          limit: 1,
+        );
+        final dueDate = event.start.toIso8601String();
+        final description = event.description ?? 'Imported from Google Calendar';
+
+        if (existing.isNotEmpty) {
+          await txn.update(
+            'domain_admin_tasks',
+            {'title': event.title, 'description': description, 'due_date': dueDate},
+            where: 'action_id = ?',
+            whereArgs: [existing.single['action_id']],
+          );
+          await txn.update(
+            'google_calendar_events',
+            {'account_email': syncData.accountEmail, 'updated_at': event.updated?.toIso8601String()},
+            where: 'event_id = ?',
+            whereArgs: [event.id],
+          );
+          continue;
+        }
+
+        final actionId = _uuid.v4();
+        final now = DateTime.now();
+        final payload = {
+          'title': event.title,
+          'description': description,
+          'due_date': dueDate,
+          'source': 'google_calendar',
+          'google_event_id': event.id,
+        };
+        await txn.insert('core_ai_actions', CoreAiAction(
+          actionId: actionId,
+          rawUserInput: event.title,
+          inferredDomain: 'TO-DO',
+          executionStrategy: 'SINGLE_PASS',
+          jsonPayload: payload,
+          status: 'COMPLETED',
+          createdAt: now,
+        ).toMap());
+        await txn.insert('domain_admin_tasks', {
+          'action_id': actionId,
+          'title': event.title,
+          'description': description,
+          'due_date': dueDate,
+          'is_recurring': 0,
+          'completion_status': 0,
+        });
+        await txn.insert('google_calendar_events', {
+          'event_id': event.id,
+          'action_id': actionId,
+          'account_email': syncData.accountEmail,
+          'updated_at': event.updated?.toIso8601String(),
+        });
+        imported++;
+      }
+    });
+    return imported;
+  }
+}
+
+class GoogleCalendarImportResult {
+  const GoogleCalendarImportResult({
+    required this.received,
+    required this.imported,
+    required this.warnings,
+  });
+
+  final int received;
+  final int imported;
+  final List<String> warnings;
 }
 
 // --- PROVIDERS ---
@@ -159,6 +244,19 @@ class TodosNotifier extends AsyncNotifier<List<AdminTask>> {
 
     await ref.read(taskRepositoryProvider).deleteTaskByActionId(task.actionId);
     ref.read(coreActionNotifierProvider.notifier).loadActions();
+  }
+
+  Future<GoogleCalendarImportResult?> syncGoogleCalendar() async {
+    final syncData = await GoogleCalendarService().loadUpcomingEvents();
+    if (syncData == null) return null;
+    final imported = await ref.read(taskRepositoryProvider).upsertGoogleCalendarEvents(syncData);
+    ref.invalidateSelf();
+    ref.read(coreActionNotifierProvider.notifier).loadActions();
+    return GoogleCalendarImportResult(
+      received: syncData.events.length,
+      imported: imported,
+      warnings: syncData.warnings,
+    );
   }
 
   void reorderTasks(int oldIndex, int newIndex) {

@@ -942,7 +942,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
             ],
           ),
           content: const Text(
-            'Would you like to sync your tasks and due dates from Google Calendar or Apple Calendar?',
+            'Sign in to Google to import events and start times from your primary calendar for the next 90 days.',
             style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
           ),
           actions: [
@@ -951,14 +951,29 @@ class _TodosPageState extends ConsumerState<TodosPage> {
               child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             ),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Calendar sync will be available soon.'),
+                final messenger = ScaffoldMessenger.of(this.context);
+                messenger.showSnackBar(const SnackBar(content: Text('Connecting to Google Calendar...')));
+                try {
+                  final result = await ref.read(todosNotifierProvider.notifier).syncGoogleCalendar();
+                  if (!mounted) return;
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text(result == null
+                        ? 'Google Calendar sign-in was cancelled.'
+                        : 'Calendar synced. ${result.received} found, ${result.imported} new imported.'
+                            '${result.warnings.isEmpty ? '' : ' ${result.warnings.first}'}'),
                     backgroundColor: _primaryColor,
-                  ),
-                );
+                  ));
+                } catch (error) {
+                  if (!mounted) return;
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text('Google Calendar sync failed: $error'),
+                    backgroundColor: Colors.redAccent,
+                  ));
+                }
               },
               icon: const Icon(Icons.sync_rounded, size: 18),
               label: const Text('Sync'),

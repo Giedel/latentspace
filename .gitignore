@@ -33,6 +33,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# OAuth downloads can contain a client secret. They are configuration material,
+# not Flutter assets, so keep them outside source control.
+client_secret*.json
+oauth_client*.json
+
 # Symbolication related
 app.*.symbols
 
