@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 /// button. Leaving [SnackBar.margin] unset lets Scaffold position it around
 /// the FAB instead of applying an additional, overly large offset.
 class AppFeedback {
-  static const _themeColor = Color(0xFF6B4FA0);
-
   static void show(
     BuildContext context, {
     required String message,
@@ -17,23 +15,24 @@ class AppFeedback {
     Duration duration = const Duration(seconds: 3),
   }) {
     final messenger = ScaffoldMessenger.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 3,
         duration: duration,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: _themeColor.withValues(alpha: 0.18)),
+          side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.18)),
         ),
         content: SizedBox(
           height: 40,
           child: Row(
             children: [
-              Icon(icon, color: _themeColor, size: 20),
+              Icon(icon, color: colorScheme.primary, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -50,7 +49,7 @@ class AppFeedback {
                     unawaited(onAction());
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: _themeColor,
+                    foregroundColor: colorScheme.primary,
                     minimumSize: const Size(48, 32),
                     maximumSize: const Size(72, 40),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,

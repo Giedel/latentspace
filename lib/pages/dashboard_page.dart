@@ -42,6 +42,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final actionsState = ref.watch(coreActionNotifierProvider);
     final todosState = ref.watch(todosNotifierProvider);
     final financeState = ref.watch(financeNotifierProvider);
@@ -53,7 +54,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     ).where((item) => !deletedIds.contains(item.id) && !readIds.contains(item.id)).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -133,7 +134,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.smart_toy_outlined, size: 24, color: Color(0xFF6B4FA0)),
+              icon: Icon(Icons.smart_toy_outlined, size: 24, color: Theme.of(context).colorScheme.primary),
               tooltip: 'Agentic Assistant Console',
               onPressed: () {
                 Navigator.push(
@@ -160,8 +161,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     child: Container(
                       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF6B4FA0),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -195,7 +196,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Text(
               actionText,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B4FA0), fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -236,8 +237,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         const SizedBox(height: 8),
         ...pendingActions.map((action) => CustomCard(
           margin: const EdgeInsets.only(bottom: 10),
-          backgroundColor: Colors.white,
-          border: Border.all(color: Colors.white, width: 1.2),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), width: 1.2),
           elevation: 0.8,
           onTap: () => _showEditableReviewDialog(context, ref, action),
           child: Row(
@@ -301,7 +302,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           builder: (context, setModalState) {
             return AlertDialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               title: Row(
@@ -310,7 +311,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     domain == 'FINANCE' ? Icons.account_balance_wallet_rounded
                         : domain == 'NOTE' ? Icons.note_alt_rounded
                         : Icons.check_circle_outline_rounded,
-                    color: const Color(0xFF6B4FA0),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 10),
                   Text('Review $domain', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -326,7 +327,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFAFAFA),
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                       ),
@@ -426,7 +427,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     showDialog(
                       context: context,
                       builder: (confirmContext) => AlertDialog(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
                         surfaceTintColor: Colors.transparent,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         title: const Text('Discard this item?', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -434,7 +435,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(confirmContext),
-                            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                            child: Text('Cancel', style: TextStyle(color: Theme.of(confirmContext).colorScheme.primary)),
                           ),
                           TextButton(
                             onPressed: () {
@@ -454,7 +455,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       ),
                     );
                   },
-                  child: const Text('Discard', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                  child: Text('Discard', style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
                 ),
                 FilledButton(
                   onPressed: () async {
@@ -480,7 +481,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     }
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF6B4FA0),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Approve & Save', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -559,12 +560,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3E5F5),
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Pending',
-                        style: TextStyle(color: Color(0xFF6B4FA0), fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

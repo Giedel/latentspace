@@ -193,7 +193,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
   Future<void> _showImageSourcePicker() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -205,12 +205,12 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF6B4FA0)),
+                  leading: Icon(Icons.camera_alt_rounded, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Take picture'),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF6B4FA0)),
+                  leading: Icon(Icons.photo_library_rounded, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Choose image'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
@@ -287,6 +287,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = bottomInset > 0;
 
@@ -301,7 +302,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
       ),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
@@ -361,7 +362,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
                   ),
                   const SizedBox(width: 6),
                   ActionChip(
-                    avatar: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF6B4FA0)),
+                    avatar: Icon(Icons.check_circle_outline_rounded, size: 16, color: colorScheme.primary),
                     label: const Text('Remind me to call Mom at 5 PM', style: TextStyle(fontSize: 12)),
                     onPressed: () => setState(() => _controller.text = 'Remind me to call Mom at 5 PM'),
                   ),
@@ -381,12 +382,12 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.mic_rounded, color: Color(0xFF6B4FA0)),
+                      icon: Icon(Icons.mic_rounded, color: colorScheme.primary),
                       tooltip: 'Voice dictation',
                       onPressed: _isProcessing ? null : _startVoiceInput,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF6B4FA0)),
+                      icon: Icon(Icons.camera_alt_outlined, color: colorScheme.primary),
                       tooltip: 'Add image',
                       onPressed: _isProcessing ? null : _showImageSourcePicker,
                     )
@@ -401,7 +402,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
                     : FilledButton(
                         onPressed: _submit,
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF6B4FA0),
+                          backgroundColor: colorScheme.primary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
@@ -416,13 +417,14 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
   }
 
   Widget _buildVoiceComposer() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.delete_rounded, color: _primaryColor, size: 30),
+              icon: Icon(Icons.delete_rounded, color: colorScheme.primary, size: 30),
               tooltip: 'Delete voice input',
               onPressed: _isProcessing ? null : _deleteVoiceInput,
             ),
@@ -430,7 +432,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
               child: _buildActiveVoiceBar(),
             ),
             IconButton(
-              icon: const Icon(Icons.send_rounded, color: _primaryColor, size: 34),
+              icon: Icon(Icons.send_rounded, color: colorScheme.primary, size: 34),
               tooltip: 'Send',
               onPressed: _isProcessing ? null : _submit,
             ),
@@ -454,7 +456,7 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
         hintText: 'Speech text will appear here',
         hintStyle: const TextStyle(color: Colors.black26, fontSize: 14),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).colorScheme.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -466,27 +468,28 @@ class _MultimodalInputSheetState extends ConsumerState<MultimodalInputSheet> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _primaryColor, width: 1.4),
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.4),
         ),
       ),
     );
   }
 
   Widget _buildActiveVoiceBar() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       height: 58,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: _primaryColor,
+        color: colorScheme.primary,
         borderRadius: BorderRadius.circular(32),
       ),
       child: Row(
         children: [
-          Expanded(child: _buildWaveform(color: Colors.white)),
+          Expanded(child: _buildWaveform(color: colorScheme.onPrimary)),
           const SizedBox(width: 10),
           Text(
             _formatVoiceDuration(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ],
       ),

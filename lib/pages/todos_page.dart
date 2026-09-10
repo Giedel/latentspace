@@ -28,19 +28,20 @@ class _TodosPageState extends ConsumerState<TodosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final todosState = ref.watch(todosNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text("To-do's & Tasks", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
             tooltip: 'Sync calendar',
-            icon: const Icon(Icons.sync_rounded, color: _primaryColor),
+            icon: Icon(Icons.sync_rounded, color: colorScheme.primary),
             onPressed: () => _showCalendarSyncDialog(context),
           ),
           const SizedBox(width: 8),
@@ -112,6 +113,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
 
   Widget _buildInteractiveTaskTile(BuildContext context, WidgetRef ref, AdminTask task, Key key) {
     final isCompleted = task.completionStatus == 1;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Dismissible(
       key: key,
@@ -133,7 +135,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       child: CustomCard(
         margin: const EdgeInsets.only(bottom: 12),
         padding: EdgeInsets.zero,
-        backgroundColor: isCompleted ? Colors.grey.shade100 : Colors.white,
+        backgroundColor: isCompleted ? colorScheme.surfaceContainerHighest : colorScheme.surfaceContainer,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: Checkbox(
@@ -201,6 +203,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
   }
 
   Widget _buildTaskDateHeader(DateTime? date) {
+    final colorScheme = Theme.of(context).colorScheme;
     final label = date == null ? 'No due date' : '${_weekdayName(date)}, ${_formatLongDate(date)}';
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 10),
@@ -209,16 +212,17 @@ class _TodosPageState extends ConsumerState<TodosPage> {
           Container(
             width: 4,
             height: 22,
-            decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: colorScheme.primary, borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(width: 9),
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _primaryColor)),
+          Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.primary)),
         ],
       ),
     );
   }
 
   Widget _buildTaskCalendar(List<AdminTask> tasks) {
+    final colorScheme = Theme.of(context).colorScheme;
     final tasksByDay = _groupTasksByDay(tasks);
     final monthLabel = _formatMonthLabel(_visibleMonth);
 
@@ -226,7 +230,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _primaryColor.withValues(alpha: 0.12)),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.12)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -250,10 +254,10 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _softPurple,
+                      color: colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.calendar_month_rounded, color: _primaryColor, size: 20),
+                    child: Icon(Icons.calendar_month_rounded, color: colorScheme.primary, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -302,6 +306,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
   }
 
   Widget _buildExpandedCalendar(Map<DateTime, List<AdminTask>> tasksByDay) {
+    final colorScheme = Theme.of(context).colorScheme;
     final screenHeight = MediaQuery.sizeOf(context).height;
     final calendarHeight = screenHeight < 520 ? 260.0 : 340.0;
 
@@ -309,7 +314,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       height: calendarHeight,
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       decoration: BoxDecoration(
-        color: _softPurple.withValues(alpha: 0.35),
+        color: Colors.white,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
       ),
       child: Column(
@@ -325,7 +330,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                 child: Center(
                   child: Text(
                     _formatMonthLabel(_visibleMonth),
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: _primaryColor),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary),
                   ),
                 ),
               ),
@@ -360,6 +365,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
 
   Widget _buildCalendarModeButton(String label, _CalendarViewMode mode) {
     final isSelected = _calendarViewMode == mode;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Expanded(
       child: InkWell(
@@ -369,14 +375,14 @@ class _TodosPageState extends ConsumerState<TodosPage> {
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected ? _primaryColor : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _primaryColor.withValues(alpha: isSelected ? 0 : 0.18)),
+            border: Border.all(color: colorScheme.primary.withValues(alpha: isSelected ? 1 : 0.18), width: isSelected ? 2 : 1),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : _primaryColor,
+              color: colorScheme.primary,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
@@ -515,7 +521,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   ),
                   Text(
                     '${_selectedDate.day}',
-                    style: const TextStyle(fontSize: 22, color: _primaryColor, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 22, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -574,22 +580,23 @@ class _TodosPageState extends ConsumerState<TodosPage> {
 
   Widget _buildCalendarTaskPill(AdminTask task) {
     final isCompleted = task.completionStatus == 1;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isCompleted ? Colors.grey.shade100 : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: (isCompleted ? Colors.grey : _primaryColor).withValues(alpha: 0.16)),
+        border: Border.all(color: (isCompleted ? Colors.grey : colorScheme.primary).withValues(alpha: 0.16)),
       ),
       child: Row(
         children: [
           Icon(
             isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 15,
-            color: isCompleted ? Colors.grey : _primaryColor,
+            color: isCompleted ? Colors.grey : colorScheme.primary,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -611,13 +618,14 @@ class _TodosPageState extends ConsumerState<TodosPage> {
 
   Widget _buildWeekTaskBlock(AdminTask task) {
     final isCompleted = task.completionStatus == 1;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 3),
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
       decoration: BoxDecoration(
-        color: isCompleted ? Colors.grey.shade200 : _primaryColor.withValues(alpha: 0.9),
+        color: isCompleted ? Colors.grey.shade200 : colorScheme.primary.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(7),
       ),
       child: Text(
@@ -638,6 +646,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     Map<DateTime, List<AdminTask>> tasksByDay, {
     bool isCurrentMonth = true,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final date = _dateOnly(day);
     final isSelected = _isSameDay(date, _selectedDate);
     final isToday = _isSameDay(date, DateTime.now());
@@ -654,10 +663,10 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
         decoration: BoxDecoration(
-          color: isSelected ? _primaryColor : isToday ? _softPurple : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? _primaryColor : _primaryColor.withValues(alpha: isToday ? 0.2 : 0.08),
+            color: isSelected ? colorScheme.primary : colorScheme.primary.withValues(alpha: isToday ? 0.45 : 0.08),
           ),
         ),
         child: Opacity(
@@ -670,7 +679,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.black87,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 2),
@@ -683,7 +692,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                           width: 5,
                           height: 5,
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : _primaryColor,
+                            color: colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -723,6 +732,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
     bool isCompact = false,
     bool isCurrentMonth = true,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final date = _dateOnly(day);
     final isSelected = _isSameDay(date, _selectedDate);
     final isToday = _isSameDay(date, DateTime.now());
@@ -740,10 +750,10 @@ class _TodosPageState extends ConsumerState<TodosPage> {
         height: isCompact ? 54 : null,
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: isSelected ? _primaryColor : isToday ? _softPurple : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? _primaryColor : _primaryColor.withValues(alpha: isToday ? 0.2 : 0.08),
+            color: isSelected ? colorScheme.primary : colorScheme.primary.withValues(alpha: isToday ? 0.45 : 0.08),
           ),
         ),
         child: Opacity(
@@ -756,7 +766,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   _weekdayName(day),
                   style: TextStyle(
                     fontSize: 10,
-                    color: isSelected ? Colors.white70 : Colors.grey,
+                    color: isSelected ? colorScheme.primary : Colors.grey,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -765,7 +775,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                 style: TextStyle(
                   fontSize: isCompact ? 13 : 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.black87,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 3),
@@ -779,7 +789,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                       height: 5,
                       margin: const EdgeInsets.symmetric(horizontal: 1),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : _primaryColor,
+                        color: colorScheme.primary,
                         shape: BoxShape.circle,
                       ),
                     );
@@ -900,7 +910,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Add New Task', style: TextStyle(fontWeight: FontWeight.bold)),
           content: TextField(
@@ -925,7 +935,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
                   AppFeedback.show(context, message: 'Task added successfully!');
                 }
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
+              style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
               child: const Text('Create'),
             )
           ],
@@ -940,7 +950,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       builder: (context) {
         return AlertDialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
@@ -951,10 +961,10 @@ class _TodosPageState extends ConsumerState<TodosPage> {
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: _softPurple,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.sync_rounded, color: _primaryColor, size: 22),
+                child: Icon(Icons.sync_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -997,7 +1007,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
               icon: const Icon(Icons.sync_rounded, size: 18),
               label: const Text('Sync'),
               style: FilledButton.styleFrom(
-                backgroundColor: _primaryColor,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -1016,7 +1026,7 @@ class _TodosPageState extends ConsumerState<TodosPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Edit Task'),
           content: SizedBox(

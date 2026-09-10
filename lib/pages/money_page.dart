@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_theme.dart';
 import '../core/widgets/category_chip.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/empty_state_widget.dart';
@@ -16,7 +15,6 @@ class MoneyPage extends ConsumerStatefulWidget {
 }
 
 class _MoneyPageState extends ConsumerState<MoneyPage> {
-  static const Color _primaryColor = AppTheme.primaryColor;
   static const Color _surfaceBorder = Color(0xFFEAE6F2);
   static const Color _incomeColor = Color(0xFF16A34A);
   static const Color _expenseColor = Color(0xFFEF4444);
@@ -25,18 +23,19 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final financeState = ref.watch(financeNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text("Financial Ledger", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_card_rounded, color: _primaryColor),
+            icon: Icon(Icons.add_card_rounded, color: colorScheme.primary),
             onPressed: () => _showAddTransactionDialog(context),
           ),
         ],
@@ -62,7 +61,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: _surfaceBorder),
                     boxShadow: [
@@ -83,14 +82,14 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                       const SizedBox(height: 8),
                       Text(
                         'PHP ${data.totalBalance.toStringAsFixed(2)}',
-                        style: const TextStyle(color: Color(0xFF1E1E1E), fontSize: 32, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 14),
                       Container(
                         width: 48,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: _primaryColor,
+                          color: colorScheme.primary,
                           borderRadius: BorderRadius.circular(99),
                         ),
                       ),
@@ -108,7 +107,8 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         value: '₱${data.totalIncome.toStringAsFixed(2)}',
                         icon: Icons.arrow_downward_rounded,
                         accentColor: _incomeColor,
-                        backgroundColor: Colors.white,
+                        backgroundColor: colorScheme.surfaceContainer,
+                        valueColor: Colors.black,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -118,7 +118,8 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         value: '₱${data.totalExpense.toStringAsFixed(2)}',
                         icon: Icons.arrow_upward_rounded,
                         accentColor: _expenseColor,
-                        backgroundColor: Colors.white,
+                        backgroundColor: colorScheme.surfaceContainer,
+                        valueColor: Colors.black,
                       ),
                     ),
                   ],
@@ -168,10 +169,6 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         leading: Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF6F4FA),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                           child: Icon(icon, color: directionColor, size: 20),
                         ),
                         title: Text(log.primaryCategory, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
@@ -180,7 +177,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                           '${isExpense ? '-' : '+'} ${log.currency} $amount',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: directionColor,
+                            color: Colors.black,
                             fontSize: 15,
                           ),
                         ),
@@ -213,7 +210,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('Add Transaction', style: TextStyle(fontWeight: FontWeight.bold)),
               content: Column(
@@ -285,7 +282,7 @@ class _MoneyPageState extends ConsumerState<MoneyPage> {
                       }
                     }
                   },
-                  style: FilledButton.styleFrom(backgroundColor: _primaryColor),
+                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   child: const Text('Save'),
                 )
               ],

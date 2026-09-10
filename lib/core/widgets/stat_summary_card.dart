@@ -7,6 +7,7 @@ class StatSummaryCard extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
   final Color backgroundColor;
+  final Color? valueColor;
 
   const StatSummaryCard({
     super.key,
@@ -16,6 +17,7 @@ class StatSummaryCard extends StatelessWidget {
     required this.icon,
     required this.accentColor,
     required this.backgroundColor,
+    this.valueColor,
   });
 
   @override
@@ -50,7 +52,7 @@ class StatSummaryCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: accentColor),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: valueColor ?? accentColor),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),

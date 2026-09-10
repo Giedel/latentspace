@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latentspace/core/database/database_service.dart';
+import 'package:latentspace/core/providers/theme_provider.dart';
 import 'package:latentspace/pages/main_layout.dart';
 import 'core/theme/app_theme.dart';
 
@@ -19,16 +20,25 @@ void main() async {
   );
 }
 
-class LatentSpaceApp extends StatelessWidget {
+class LatentSpaceApp extends ConsumerWidget {
   const LatentSpaceApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeChoice = ref.watch(themeChoiceProvider);
+
     return MaterialApp(
       title: 'LatentSpace',
       debugShowCheckedModeBanner: false, // hides the debug banner in the top right corner
-      theme: AppTheme.lightTheme,
+      theme: switch (themeChoice) {
+        AppThemeChoice.ocean => AppTheme.oceanTheme,
+        AppThemeChoice.forest => AppTheme.forestTheme,
+        AppThemeChoice.sunset => AppTheme.sunsetTheme,
+        _ => AppTheme.lightTheme,
+      },
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeChoice == AppThemeChoice.system ? ThemeMode.system : ThemeMode.light,
       home:const MainLayout(),
     );
   }

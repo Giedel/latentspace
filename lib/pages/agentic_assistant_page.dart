@@ -41,19 +41,20 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final chatMessages = ref.watch(assistantChatNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Row(
+          title: Row(
           children: [
-            Icon(Icons.smart_toy_rounded, color: Color(0xFF6B4FA0)),
+            Icon(Icons.smart_toy_rounded, color: colorScheme.primary),
             SizedBox(width: 8),
             Text('SLM Agentic Assistant', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
@@ -74,7 +75,7 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
                     margin: const EdgeInsets.only(bottom: 12),
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
                     child: CustomCard(
-                      backgroundColor: isUser ? const Color(0xFF6B4FA0) : Colors.white,
+                      backgroundColor: isUser ? colorScheme.primary : colorScheme.surfaceContainer,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -84,7 +85,7 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
                               Icon(
                                 isUser ? Icons.person_rounded : Icons.psychology_rounded,
                                 size: 16,
-                                color: isUser ? Colors.white70 : const Color(0xFF6B4FA0),
+                                color: isUser ? Colors.white70 : colorScheme.primary,
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -110,17 +111,17 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3E5F5),
+                                color: colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.lightbulb_outline_rounded, size: 14, color: Color(0xFF6B4FA0)),
+                                  Icon(Icons.lightbulb_outline_rounded, size: 14, color: colorScheme.primary),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       'Agentic Reasoning: ${msg.reasoningThought}',
-                                      style: const TextStyle(fontSize: 11, color: Color(0xFF6B4FA0), fontStyle: FontStyle.italic),
+                                      style: TextStyle(fontSize: 11, color: colorScheme.primary, fontStyle: FontStyle.italic),
                                     ),
                                   ),
                                 ],
@@ -137,8 +138,8 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+              decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
               border: Border(top: BorderSide(color: Colors.black12)),
             ),
             child: Row(
@@ -156,7 +157,7 @@ class _AgenticAssistantPageState extends ConsumerState<AgenticAssistantPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send_rounded, color: Color(0xFF6B4FA0)),
+                  icon: Icon(Icons.send_rounded, color: colorScheme.primary),
                   onPressed: _send,
                 )
               ],

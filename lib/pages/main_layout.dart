@@ -36,7 +36,7 @@ class MainLayout extends ConsumerWidget {
           showModalBottomSheet(
             context: context,
             isScrollControlled: true, // Allows the sheet to adjust for the keyboard
-            backgroundColor: Colors.transparent, // Keeps our custom rounded container styling
+            backgroundColor: Theme.of(context).colorScheme.surface,
             builder: (context) => const MultimodalInputSheet(),
           );
         },
@@ -48,7 +48,7 @@ class MainLayout extends ConsumerWidget {
       // Docked Bottom Navigation Bar
       bottomNavigationBar: BottomAppBar(
         padding: EdgeInsets.zero,
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         surfaceTintColor: Colors.transparent,
         elevation: 8,
         shape: const CircularNotchedRectangle(),

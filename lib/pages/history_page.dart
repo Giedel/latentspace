@@ -27,20 +27,21 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('History Ledger', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: colorScheme.surfaceContainer,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Column(
               children: [

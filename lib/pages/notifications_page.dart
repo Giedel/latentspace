@@ -109,6 +109,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final todosState = ref.watch(todosNotifierProvider);
     final financeState = ref.watch(financeNotifierProvider);
     final readIds = ref.watch(notificationReadIdsProvider);
@@ -122,10 +123,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         : allNotifications.where((item) => !readIds.contains(item.id)).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
@@ -133,23 +134,24 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          TextButton.icon(
-            onPressed: allNotifications.isEmpty || allNotifications.every((item) => readIds.contains(item.id))
-                ? null
-                : () {
-                    ref.read(notificationReadIdsProvider.notifier).state = {
-                      ...readIds,
-                      ...allNotifications.map((item) => item.id),
-                    };
-                  },
-            icon: const Icon(Icons.done_all_rounded, size: 18),
-            label: const Text('Mark all read'),
-            style: TextButton.styleFrom(
-              foregroundColor: _primaryColor,
-              disabledForegroundColor: Colors.grey.withValues(alpha: 0.5),
-              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          if (_selectedTab == 0)
+            TextButton.icon(
+              onPressed: allNotifications.isEmpty || allNotifications.every((item) => readIds.contains(item.id))
+                  ? null
+                  : () {
+                      ref.read(notificationReadIdsProvider.notifier).state = {
+                        ...readIds,
+                        ...allNotifications.map((item) => item.id),
+                      };
+                    },
+              icon: const Icon(Icons.done_all_rounded, size: 18),
+              label: const Text('Mark all read'),
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                disabledForegroundColor: Colors.grey.withValues(alpha: 0.5),
+                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
           const SizedBox(width: 6),
         ],
       ),
@@ -157,12 +159,12 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         children: [
           Container(
             width: double.infinity,
-            color: Colors.white,
+            color: colorScheme.surfaceContainer,
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: _softPurple.withValues(alpha: 0.55),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -198,6 +200,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   Widget _buildTabButton(String label, int index, int count) {
     final isSelected = _selectedTab == index;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Expanded(
       child: InkWell(
@@ -207,13 +210,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected ? _primaryColor : Colors.transparent,
+            color: isSelected ? colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             '$label ($count)',
             style: TextStyle(
-              color: isSelected ? Colors.white : _primaryColor,
+              color: isSelected ? colorScheme.onPrimary : colorScheme.primary,
               fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
@@ -224,16 +227,17 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   Widget _buildNotificationTile(AppNotification notification, bool isRead) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () => _openNotification(notification),
-      onLongPressStart: (details) => _showNotificationMenu(notification, isRead, details.globalPosition),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white : _softPurple.withValues(alpha: 0.5),
+          color: isRead ? colorScheme.surfaceContainer : colorScheme.primaryContainer.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isRead ? Colors.grey.withValues(alpha: 0.12) : _primaryColor.withValues(alpha: 0.18),
+            color: isRead ? Colors.grey.withValues(alpha: 0.12) : colorScheme.primary.withValues(alpha: 0.18),
           ),
           boxShadow: [
             BoxShadow(
@@ -278,7 +282,46 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded, color: colorScheme.primary),
+              tooltip: 'Notification actions',
+              onSelected: (action) => _handleNotificationAction(notification, isRead, action),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: isRead ? 'unread' : 'read',
+                  child: Row(
+                    children: [
+                      Icon(
+                        isRead ? Icons.mark_email_unread_outlined : Icons.mark_email_read_outlined,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(isRead ? 'Mark as unread' : 'Mark as read'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: colorScheme.primary, width: 1),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Icon(Icons.close_rounded, size: 9, color: colorScheme.primary),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Delete notification', style: TextStyle(color: Colors.black)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -286,13 +329,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(28),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.notifications_none_rounded, color: _primaryColor, size: 44),
+            Icon(Icons.notifications_none_rounded, color: colorScheme.primary, size: 44),
             SizedBox(height: 12),
             Text('No notifications', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
@@ -313,37 +357,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     Navigator.pop(context);
   }
 
-  Future<void> _showNotificationMenu(AppNotification notification, bool isRead, Offset position) async {
-    final action = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
-      color: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      items: [
-        PopupMenuItem(
-          value: isRead ? 'unread' : 'read',
-          child: Row(
-            children: [
-              Icon(isRead ? Icons.mark_email_unread_outlined : Icons.mark_email_read_outlined, size: 18, color: _primaryColor),
-              const SizedBox(width: 10),
-              Text(isRead ? 'Mark as unread' : 'Mark as read'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
-              SizedBox(width: 10),
-              Text('Delete notification', style: TextStyle(color: Colors.redAccent)),
-            ],
-          ),
-        ),
-      ],
-    );
-
+  void _handleNotificationAction(AppNotification notification, bool isRead, String? action) {
     if (action == 'read') {
       _markAsRead(notification.id);
     } else if (action == 'unread') {

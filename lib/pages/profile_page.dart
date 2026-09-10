@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers/theme_provider.dart';
 import '../core/widgets/custom_card.dart';
 import '../core/widgets/app_feedback.dart';
 import '../core/widgets/stat_summary_card.dart';
@@ -11,14 +12,12 @@ import 'history_page.dart';
 import 'trash_page.dart';
 
 class ProfilePage extends ConsumerWidget {
-  static const Color _primaryColor = Color(0xFF6B4FA0);
-  static const Color _softPurple = Color(0xFFF3E5F5);
-  static const Color _dangerColor = Color(0xFFEF4444);
-
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final primaryColor = colorScheme.primary;
     final actionsState = ref.watch(coreActionNotifierProvider);
     final todosState = ref.watch(todosNotifierProvider);
     final financeState = ref.watch(financeNotifierProvider);
@@ -41,10 +40,10 @@ class ProfilePage extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Profile & SLM Settings', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        title: const Text('Profile Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
@@ -53,12 +52,12 @@ class ProfilePage extends ConsumerWidget {
         child: Column(
           children: [
             // User Avatar Section
-            const CircleAvatar(
+            CircleAvatar(
               radius: 44,
-              backgroundColor: _softPurple,
+              backgroundColor: colorScheme.primaryContainer,
               child: Text(
                 'G',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: _primaryColor),
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: primaryColor),
               ),
             ),
             const SizedBox(height: 12),
@@ -80,8 +79,9 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Completed Tasks',
                     value: '$completedTasks',
                     icon: Icons.check_circle_outline_rounded,
-                    accentColor: _primaryColor,
-                    backgroundColor: Colors.white,
+                    accentColor: primaryColor,
+                    backgroundColor: colorScheme.surfaceContainer,
+                    valueColor: Colors.black,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -90,8 +90,9 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Notes Saved',
                     value: '$noteCount',
                     icon: Icons.description_outlined,
-                    accentColor: _primaryColor,
-                    backgroundColor: Colors.white,
+                    accentColor: primaryColor,
+                    backgroundColor: colorScheme.surfaceContainer,
+                    valueColor: Colors.black,
                   ),
                 ),
               ],
@@ -104,8 +105,9 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Net Balance',
                     value: '₱${balance.toStringAsFixed(2)}',
                     icon: Icons.account_balance_wallet_outlined,
-                    accentColor: _primaryColor,
-                    backgroundColor: Colors.white,
+                    accentColor: primaryColor,
+                    backgroundColor: colorScheme.surfaceContainer,
+                    valueColor: Colors.black,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -114,8 +116,9 @@ class ProfilePage extends ConsumerWidget {
                     title: 'Total Logs',
                     value: '$actionCount',
                     icon: Icons.history_rounded,
-                    accentColor: _primaryColor,
-                    backgroundColor: Colors.white,
+                    accentColor: primaryColor,
+                    backgroundColor: colorScheme.surfaceContainer,
+                    valueColor: Colors.black,
                   ),
                 ),
               ],
@@ -133,11 +136,7 @@ class ProfilePage extends ConsumerWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _softPurple.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.smart_toy_rounded, color: _primaryColor),
+                    child: Icon(Icons.smart_toy_rounded, color: primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -158,11 +157,7 @@ class ProfilePage extends ConsumerWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _softPurple.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.history_rounded, color: _primaryColor),
+                    child: Icon(Icons.history_rounded, color: primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -175,22 +170,16 @@ class ProfilePage extends ConsumerWidget {
 
             CustomCard(
               margin: const EdgeInsets.only(bottom: 12),
-              onTap: () {
-                AppFeedback.show(context, message: 'Google connection will be available soon.', icon: Icons.info_outline_rounded);
-              },
+              onTap: () => _showThemePicker(context, ref),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _softPurple.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.account_circle_rounded, color: _primaryColor),
+                    child: Icon(Icons.palette_outlined, color: primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
-                    child: Text('Connect to Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    child: Text('Customize Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                 ],
@@ -207,11 +196,7 @@ class ProfilePage extends ConsumerWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _softPurple.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.delete_outline_rounded, color: _primaryColor),
+                    child: Icon(Icons.delete_outline_rounded, color: primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -231,15 +216,11 @@ class ProfilePage extends ConsumerWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _softPurple.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.info_outline_rounded, color: _primaryColor),
+                    child: Icon(Icons.info_outline_rounded, color: primaryColor),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
-                    child: Text('About LatentSpace Architecture', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    child: Text('About LatentSpace', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                 ],
@@ -248,6 +229,46 @@ class ProfilePage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showThemePicker(BuildContext context, WidgetRef ref) {
+    final currentTheme = ref.read(themeChoiceProvider);
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    const options = [
+      (AppThemeChoice.system, 'Phone theme', Icons.phone_android_rounded),
+      (AppThemeChoice.defaultTheme, 'Default theme', Icons.auto_awesome_rounded),
+      (AppThemeChoice.ocean, 'Ocean', Icons.water_drop_outlined),
+      (AppThemeChoice.forest, 'Forest', Icons.forest_outlined),
+      (AppThemeChoice.sunset, 'Sunset', Icons.wb_sunny_outlined),
+    ];
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Customize Theme'),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.map((option) {
+              final (choice, label, icon) = option;
+              return RadioListTile<AppThemeChoice>(
+                value: choice,
+                groupValue: currentTheme,
+                secondary: Icon(icon, color: primaryColor),
+                title: Text(label),
+                onChanged: (selectedChoice) {
+                  if (selectedChoice == null) return;
+                  ref.read(themeChoiceProvider.notifier).state = selectedChoice;
+                  Navigator.pop(dialogContext);
+                  AppFeedback.show(context, message: '$label selected', icon: Icons.palette_outlined);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }

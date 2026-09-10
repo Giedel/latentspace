@@ -14,18 +14,19 @@ class TrashPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
     final actionsState = ref.watch(coreActionNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Trash Bin', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surfaceContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever_rounded, color: _themeColor),
+            icon: Icon(Icons.delete_forever_rounded, color: colorScheme.primary),
             tooltip: 'Empty Trash',
             onPressed: () => _confirmEmptyTrash(context, ref),
           ),
@@ -59,6 +60,7 @@ class TrashPage extends ConsumerWidget {
   }
 
   Widget _buildTrashTile(BuildContext context, WidgetRef ref, CoreAiAction action) {
+    final colorScheme = Theme.of(context).colorScheme;
     return CustomCard(
       margin: const EdgeInsets.only(bottom: 12),
       // Match the scaffold surface so the shadow is visible only outside the
@@ -79,7 +81,7 @@ class TrashPage extends ConsumerWidget {
               action.inferredDomain == 'FINANCE' ? Icons.account_balance_wallet_rounded
                   : action.inferredDomain == 'NOTE' ? Icons.note_alt_rounded
                   : Icons.check_circle_outline_rounded,
-              color: _themeColor,
+              color: colorScheme.primary,
             ),
           ),
           const SizedBox(width: 14),
@@ -111,17 +113,18 @@ class TrashPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: colorScheme.surface,
           surfaceTintColor: Colors.transparent,
           elevation: 3,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
             side: const BorderSide(color: Colors.white, width: 1.2),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.delete_forever_rounded, color: _themeColor),
+              Icon(Icons.delete_forever_rounded, color: colorScheme.primary),
               SizedBox(width: 10),
               Text('Empty Trash?'),
             ],
@@ -155,13 +158,14 @@ class TrashPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           backgroundColor: Colors.transparent,
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400, maxHeight: 420),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: Colors.white, width: 1.2),
               boxShadow: [
@@ -179,7 +183,7 @@ class TrashPage extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.auto_delete_rounded, color: _themeColor),
+                      Icon(Icons.auto_delete_rounded, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       const Text(
                         'Trashed Item Preview',
@@ -215,13 +219,17 @@ class TrashPage extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
-                        onPressed: () {
-                          ref.read(coreActionNotifierProvider.notifier).deleteActionPermanently(action.actionId);
+                        onPressed: () async {
+                          final confirmed = await _confirmDeleteItem(context);
+                          if (!confirmed || !context.mounted) return;
+
+                          await ref.read(coreActionNotifierProvider.notifier).deleteActionPermanently(action.actionId);
+                          if (!context.mounted) return;
                           Navigator.pop(context);
                           AppFeedback.show(context, message: 'Item deleted permanently', icon: Icons.delete_forever_rounded);
                         },
-                        icon: const Icon(Icons.delete_forever_rounded, color: _themeColor, size: 18),
-                        label: const Text('Delete', style: TextStyle(color: _themeColor)),
+                        icon: Icon(Icons.delete_forever_rounded, color: colorScheme.primary, size: 18),
+                        label: Text('Delete', style: TextStyle(color: colorScheme.primary)),
                       ),
                       FilledButton.icon(
                         onPressed: () async {
@@ -238,7 +246,7 @@ class TrashPage extends ConsumerWidget {
                         },
                         icon: const Icon(Icons.restore_rounded, size: 18),
                         label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6B4FA0)),
+                        style: FilledButton.styleFrom(backgroundColor: colorScheme.primary),
                       )
                     ],
                   )
@@ -249,6 +257,31 @@ class TrashPage extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<bool> _confirmDeleteItem(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              title: const Text('Delete item permanently?'),
+              content: const Text('This item will be permanently deleted and cannot be restored.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   List<Widget> _buildDetailsForPreview(CoreAiAction action) {
